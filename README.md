@@ -5,8 +5,10 @@ For reasons I cannot fathom, the developer of 7zip and the porters/developers of
 
 This repository contains a properly tagged and branched recent history of 7zip and p7zip source code to help with debugging and porting, starting with version 9.20 released in 2010.
 
-The master branch contains the 7zip code built from the downloadable archives at https://sourceforge.net/projects/sevenzip/
+The master_7zip branch contains the 7zip code built from the downloadable archives at https://sourceforge.net/projects/sevenzip/
 
-The p7zip branch contains the 7pzip code, branched of the corresponding ported version of 7zip and assembled from the  downloadable archives at https://sourceforge.net/projects/p7zip/
+The master_p7zip branch contains the 7pzip code, branched of the corresponding ported version of 7zip and assembled from the  downloadable archives at https://sourceforge.net/projects/p7zip/
 
 Each released version is tagged with vXXXX-7zip for 7zip versions and vXXXX-p7zip for p7zip versions.
+
+The code is originally available under a combination of the LGPL 2.1 and the unrar license. See the LICENSE file for details.
