@@ -3,7 +3,7 @@
 
 For reasons I cannot fathom, the developer of 7zip and the porters/developers of p7zip do not maintain a public version control system with their source code. (I sure hope for their sanity they use one privately)
 
-This repository contains a properly tagged and branched recent history of 7zip and p7zip source code to help with debugging and porting.
+This repository contains a properly tagged and branched recent history of 7zip and p7zip source code to help with debugging and porting, starting with version 9.20 released in 2010.
 
 The master branch contains the 7zip code built from the downloadable archives at https://sourceforge.net/projects/sevenzip/
 
