@@ -1,7 +1,7 @@
 7zip-and-p7zip
 ==============
 
-For reasons I cannot fathom, the developer of 7zip and the porters/developers of p7zip do not maintain a public version control system with their source code. (I sure hope for their sanity they use one privately)
+For reasons I cannot fathom, the developer of 7zip and the porters/developers of p7zip do not maintain a public version control system for their source code history. (I sure hope for their sanity they use one privately)
 
 This repository contains a properly tagged and branched recent history of 7zip and p7zip source code to help with debugging and porting, starting with version 9.20 released in 2010.
 
@@ -11,4 +11,4 @@ The master_p7zip branch ( https://github.com/pombredanne/7zip-and-p7zip/tree/mas
 
 Each released version is tagged with vXXXX-7zip for 7zip versions and vXXXX-p7zip for p7zip versions.
 
-The code is --as originally-- available under a combination of the LGPL 2.1 and the unRar restricted license. See the LICENSE file  and the DOCS directory in each branch for details.
+The code is --as originally-- available under a combination of the LGPL 2.1 and the unRar restricted license. See the LICENSE.7zip file  and the DOCS directory in each branch for details.
