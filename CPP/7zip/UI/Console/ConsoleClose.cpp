@@ -4,48 +4,24 @@
 
 #include "ConsoleClose.h"
 
+#include <signal.h>
+
 static int g_BreakCounter = 0;
 static const int kBreakAbortThreshold = 2;
 
 namespace NConsoleClose {
 
-#if !defined(UNDER_CE) && defined(_WIN32)
-static BOOL WINAPI HandlerRoutine(DWORD ctrlType)
+static void HandlerRoutine(int)
 {
-  if (ctrlType == CTRL_LOGOFF_EVENT)
-  {
-    // printf("\nCTRL_LOGOFF_EVENT\n");
-    return TRUE;
-  }
-
   g_BreakCounter++;
   if (g_BreakCounter < kBreakAbortThreshold)
-    return TRUE;
-  return FALSE;
-  /*
-  switch(ctrlType)
-  {
-    case CTRL_C_EVENT:
-    case CTRL_BREAK_EVENT:
-      if (g_BreakCounter < kBreakAbortThreshold)
-      return TRUE;
-  }
-  return FALSE;
-  */
+    return ;
+  exit(EXIT_FAILURE);
 }
-#endif
 
 bool TestBreakSignal()
 {
-  #ifdef UNDER_CE
-  return false;
-  #else
-  /*
-  if (g_BreakCounter > 0)
-    return true;
-  */
   return (g_BreakCounter > 0);
-  #endif
 }
 
 void CheckCtrlBreak()
@@ -56,18 +32,18 @@ void CheckCtrlBreak()
 
 CCtrlHandlerSetter::CCtrlHandlerSetter()
 {
-  #if !defined(UNDER_CE) && defined(_WIN32)
-  if(!SetConsoleCtrlHandler(HandlerRoutine, TRUE))
-    throw "SetConsoleCtrlHandler fails";
-  #endif
+   memo_sig_int = signal(SIGINT,HandlerRoutine); // CTRL-C
+   if (memo_sig_int == SIG_ERR)
+    throw "SetConsoleCtrlHandler fails (SIGINT)";
+   memo_sig_term = signal(SIGTERM,HandlerRoutine); // for kill -15 (before "kill -9")
+   if (memo_sig_term == SIG_ERR)
+    throw "SetConsoleCtrlHandler fails (SIGTERM)";
 }
 
 CCtrlHandlerSetter::~CCtrlHandlerSetter()
 {
-  #if !defined(UNDER_CE) && defined(_WIN32)
-  if(!SetConsoleCtrlHandler(HandlerRoutine, FALSE))
-    throw "SetConsoleCtrlHandler fails";
-  #endif
+   signal(SIGINT,memo_sig_int); // CTRL-C
+   signal(SIGTERM,memo_sig_term); // kill {pid}
 }
 
 }

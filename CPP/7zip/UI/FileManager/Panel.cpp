@@ -2,33 +2,33 @@
 
 #include "StdAfx.h"
 
+#ifdef _WIN32
 #include <Windowsx.h>
+#endif
 
 #include "Common/Defs.h"
-#include "Common/IntToString.h"
 #include "Common/StringConvert.h"
-
+#include "Common/IntToString.h"
 #include "Windows/Error.h"
 #include "Windows/PropVariant.h"
 #include "Windows/Thread.h"
 
 #include "../../PropID.h"
 
+#include "Panel.h"
+#include "RootFolder.h"
+#include "FSFolder.h"
+#include "FormatUtils.h"
+#include "App.h"
+#include "ExtractCallback.h"
+
 #include "resource.h"
 #include "../GUI/ExtractRes.h"
 
-#include "../Common/ArchiveName.h"
-#include "../Common/CompressCall.h"
-
 #include "../Agent/IFolderArchive.h"
 
-#include "App.h"
-#include "ExtractCallback.h"
-#include "FSFolder.h"
-#include "FormatUtils.h"
-#include "Panel.h"
-#include "RootFolder.h"
-
+#include "../Common/CompressCall.h"
+#include "../Common/ArchiveName.h"
 
 using namespace NWindows;
 using namespace NControl;
@@ -40,7 +40,9 @@ extern bool g_IsNT;
 static const UINT_PTR kTimerID = 1;
 static const UINT kTimerElapse = 1000;
 
+#ifdef _WIN32
 static DWORD kStyles[4] = { LVS_ICON, LVS_SMALLICON, LVS_LIST, LVS_REPORT };
+#endif
 
 // static const int kCreateFolderID = 101;
 // static const UINT kFileChangeNotifyMessage = WM_APP;
@@ -52,8 +54,10 @@ void CPanel::Release()
 {
   // It's for unloading COM dll's: don't change it.
   CloseOpenFolders();
+#ifdef _WIN32
   _sevenZipContextMenu.Release();
   _systemContextMenu.Release();
+#endif
 }
 
 CPanel::~CPanel()
@@ -61,11 +65,13 @@ CPanel::~CPanel()
   CloseOpenFolders();
 }
 
+#ifdef _WIN32 // FIXME
 HWND CPanel::GetParent()
 {
   HWND h = CWindow2::GetParent();
   return (h == 0) ? _mainWindow : h;
 }
+#endif
 
 static LPCWSTR kClassName = L"7-Zip::Panel";
 
@@ -95,10 +101,20 @@ HRESULT CPanel::Create(HWND mainWindow, HWND parentWindow, UINT id,
         cfp = currentFolderPrefix;
   RINOK(BindToPath(cfp, arcFormat, archiveIsOpened, encrypted));
 
+#ifdef _WIN32
   if (!CreateEx(0, kClassName, 0, WS_CHILD | WS_VISIBLE,
       0, 0, _xSize, 260,
       parentWindow, (HMENU)(UINT_PTR)id, g_hInstance))
     return E_FAIL;
+#else
+  {
+  	// printf("WARNING CPanel::Create => CreateEx\n");
+  	// this->OnCreate(0);
+  	extern void registerWindow2(int baseID,NWindows::NControl::CWindow2 *w);
+	registerWindow2(_baseID,this);
+  }
+#endif
+
   return S_OK;
 }
 
@@ -120,9 +136,7 @@ LRESULT CPanel::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
     case kRefreshStatusBar:
       OnRefreshStatusBar();
       return 0;
-    case kRefreshHeaderComboBox:
-      LoadFullPathAndShow();
-      return 0;
+#ifdef _WIN32
     case WM_TIMER:
       OnTimer();
       return 0;
@@ -135,10 +149,12 @@ LRESULT CPanel::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
       CompressDropFiles(HDROP(wParam));
       return 0;
     */
+#endif
   }
   return CWindow2::OnMessage(message, wParam, lParam);
 }
 
+#ifdef _WIN32
 static LRESULT APIENTRY ListViewSubclassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
   CWindow tempDialog(hwnd);
@@ -159,7 +175,7 @@ LRESULT CMyListView::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
         virtualKey == VK_SUBTRACT)
       return 0;
     if ((wParam == '/' && extended)
-        || wParam == '\\' || wParam == '/')
+        || wParam == CHAR_PATH_SEPARATOR || wParam == '/')
     {
       _panel->OpenDrivesFolder();
       return 0;
@@ -189,7 +205,6 @@ LRESULT CMyListView::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
     bool shift = (::GetKeyState(VK_SHIFT) & 0x8000) != 0;
     switch(wParam)
     {
-      /*
       case VK_RETURN:
       {
         if (shift && !alt && !ctrl)
@@ -199,7 +214,6 @@ LRESULT CMyListView::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
       }
-      */
       case VK_NEXT:
       {
         if (ctrl && !alt && !shift)
@@ -217,17 +231,6 @@ LRESULT CMyListView::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
       }
     }
   }
-  #ifdef UNDER_CE
-  else if (message == WM_KEYUP)
-  {
-    if (wParam == VK_F2) // it's VK_TSOFT2
-    {
-      // Activate Menu
-      ::PostMessage(g_HWND, WM_SYSCOMMAND, SC_KEYMENU, 0);
-      return 0;
-    }
-  }
-  #endif
   else if (message == WM_SETFOCUS)
   {
     _panel->_lastFocusedIsList = true;
@@ -328,6 +331,15 @@ LRESULT CMyComboBoxEdit::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
     return CallWindowProc(_origWindowProc, *this, message, wParam, lParam);
 }
 
+static HIMAGELIST GetSysImageList(bool smallIcons)
+{
+  SHFILEINFO shellInfo;
+  return (HIMAGELIST)SHGetFileInfo(TEXT(""),
+      FILE_ATTRIBUTE_NORMAL |FILE_ATTRIBUTE_DIRECTORY,
+      &shellInfo, sizeof(shellInfo),
+      SHGFI_USEFILEATTRIBUTES | SHGFI_SYSICONINDEX | (smallIcons ? SHGFI_SMALLICON : SHGFI_ICON));
+}
+
 bool CPanel::OnCreate(CREATESTRUCT * /* createStruct */)
 {
   // _virtualMode = false;
@@ -365,9 +377,7 @@ bool CPanel::OnCreate(CREATESTRUCT * /* createStruct */)
       HWND(*this), (HMENU)(UINT_PTR)(_baseID + 1), g_hInstance, NULL))
     return false;
 
-  #ifndef UNDER_CE
   _listView.SetUnicodeFormat(true);
-  #endif
 
   _listView.SetUserDataLongPtr(LONG_PTR(&_listView));
   _listView._panel = this;
@@ -409,9 +419,7 @@ bool CPanel::OnCreate(CREATESTRUCT * /* createStruct */)
     // {VIEW_NEWFOLDER, kCreateFolderID, TBSTATE_ENABLED, BTNS_BUTTON, 0L, 0},
   };
 
-  #ifndef UNDER_CE
   if (g_ComCtl32Version >= MAKELONG(71, 4))
-  #endif
   {
     icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
     icex.dwICC  = ICC_COOL_CLASSES | ICC_BAR_CLASSES;
@@ -422,7 +430,7 @@ bool CPanel::OnCreate(CREATESTRUCT * /* createStruct */)
       NULL, WS_VISIBLE | WS_BORDER | WS_CHILD |
       WS_CLIPCHILDREN | WS_CLIPSIBLINGS
       | CCS_NODIVIDER
-      // | CCS_NOPARENTALIGN
+      | CCS_NOPARENTALIGN
       | CCS_TOP
       | RBS_VARHEIGHT
       | RBS_BANDBORDERS
@@ -450,27 +458,17 @@ bool CPanel::OnCreate(CREATESTRUCT * /* createStruct */)
       (LPCTBBUTTON)&tbb, sizeof(tbb) / sizeof(tbb[0]),
       0, 0, 0, 0, sizeof (TBBUTTON)));
 
-  #ifndef UNDER_CE
-  // Load ComboBoxEx class
   icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
   icex.dwICC = ICC_USEREX_CLASSES;
   InitCommonControlsEx(&icex);
-  #endif
   
-  _headerComboBox.CreateEx(0,
-      #ifdef UNDER_CE
-      WC_COMBOBOXW
-      #else
-      WC_COMBOBOXEXW
-      #endif
-      , NULL,
+  _headerComboBox.CreateEx(0, WC_COMBOBOXEXW, NULL,
     WS_BORDER | WS_VISIBLE |WS_CHILD | CBS_DROPDOWN | CBS_AUTOHSCROLL,
       0, 0, 100, 520,
       ((_headerReBar == 0) ? HWND(*this) : _headerToolBar),
       (HMENU)(UINT_PTR)(_comboBoxID),
       g_hInstance, NULL);
-  #ifndef UNDER_CE
-  _headerComboBox.SetUnicodeFormat(true);
+  _headerComboBox.SendMessage(CBEM_SETUNICODEFORMAT, (WPARAM)(BOOL)TRUE, 0);
 
   _headerComboBox.SetImageList(GetSysImageList(true));
 
@@ -498,8 +496,6 @@ bool CPanel::OnCreate(CREATESTRUCT * /* createStruct */)
      _comboBoxEdit._origWindowProc =
       (WNDPROC)_comboBoxEdit.SetLongPtr(GWLP_WNDPROC, LONG_PTR(ComboBoxEditSubclassProc));
 
-  #endif
-
   if (_headerReBar)
   {
     REBARINFO     rbi;
@@ -516,7 +512,7 @@ bool CPanel::OnCreate(CREATESTRUCT * /* createStruct */)
     
     REBARBANDINFO rbBand;
     rbBand.cbSize = sizeof(REBARBANDINFO);  // Required
-    rbBand.fMask = RBBIM_STYLE | RBBIM_CHILD | RBBIM_CHILDSIZE | RBBIM_SIZE;
+    rbBand.fMask  = RBBIM_STYLE | RBBIM_CHILD | RBBIM_CHILDSIZE | RBBIM_SIZE;
     rbBand.fStyle = RBBS_NOGRIPPER;
     rbBand.cxMinChild = size.cx;
     rbBand.cyMinChild = size.cy;
@@ -556,17 +552,112 @@ bool CPanel::OnCreate(CREATESTRUCT * /* createStruct */)
   
   return true;
 }
+#else
+bool CPanel::OnCreate(CREATESTRUCT * /* createStruct */)
+{
+   printf("WARNING CPanel::OnCreate\n");
+  _sortID = kpidName;
+  _ascending = true;
+  _lastFocusedIsList = true;
+
+  extern HWND g_HWND;
+  HWND w = GetDlgItem(g_HWND, _comboBoxID);
+  if (w == 0) 
+  {
+	  printf("Can't find id=%d\n",_comboBoxID);
+	  return false;
+  }
+  printf("CPanel::OnCreate : _headerComboBox.Attach(%p)\n",w);
+  _headerComboBox.Attach(w);
+
+  w = GetDlgItem(g_HWND, _statusBarID);
+  if (w == 0) 
+  {
+	  printf("Can't find id=%d\n",_statusBarID);
+	  return false;
+  }
+  printf("CPanel::OnCreate : _statusBar.Attach(%p)\n",w);
+  _statusBar.Attach(w);
+
+  w = GetDlgItem(g_HWND, _baseID + 1);
+  if (w == 0) 
+  {
+	  printf("Can't find id=%d\n",_baseID + 1);
+	  return false;
+  }
+  printf("CPanel::OnCreate : _listView.Attach(%p)\n",w);
+  _listView.Attach(w);
+  
+  _listView.SetUnicodeFormat(true);
+
+  // _listView.SetUserDataLongPtr(LONG_PTR(&_listView));
+  _listView._panel = this;
+
+  // FIXME _listView.SetImageList(GetSysImageList(true), LVSIL_SMALL);
+  // FIXME _listView.SetImageList(GetSysImageList(false), LVSIL_NORMAL);
+
+  // FIXME SetExtendedStyle();
+
+  // FIXME _listView.Show(SW_SHOW);
+  // FIXME _listView.InvalidateRect(NULL, true);
+  _listView.Update();
+  
+  /* FIXME
+  _headerToolBar.Attach(::CreateToolbarEx ((*this), toolbarStyle,
+      _baseID + 2, 11,
+      (HINSTANCE)HINST_COMMCTRL,
+      IDB_VIEW_SMALL_COLOR,
+      (LPCTBBUTTON)&tbb, sizeof(tbb) / sizeof(tbb[0]),
+      0, 0, 0, 0, sizeof (TBBUTTON)));
+      */
+
+  /* FIXME
+  _headerComboBox.CreateEx(0, WC_COMBOBOXEXW, NULL,
+    WS_BORDER | WS_VISIBLE |WS_CHILD | CBS_DROPDOWN | CBS_AUTOHSCROLL,
+      0, 0, 100, 520,
+      ((_headerReBar == 0) ? HWND(*this) : _headerToolBar),
+      (HMENU)(UINT_PTR)(_comboBoxID),
+      g_hInstance, NULL);
+  _headerComboBox.SendMessage(CBEM_SETUNICODEFORMAT, (WPARAM)(BOOL)TRUE, 0);
+
+  _headerComboBox.SetImageList(GetSysImageList(true));
+
+  _headerComboBox.SetExtendedStyle(CBES_EX_PATHWORDBREAKPROC, CBES_EX_PATHWORDBREAKPROC);
+  */
+
+  // FIXME _comboBoxEdit.Attach(_headerComboBox.GetEditControl());
+
+  _comboBoxEdit._panel = this;
+
+  // FIXME if (_headerReBar) ...
+
+  // _statusBar.Create(WS_CHILD | WS_VISIBLE, L"Status", (*this), _statusBarID);
+
+  // int sizes[] = {150, 250, 350, -1};
+  // _statusBar.SetParts(4, sizes);
+
+  // SetTimer(kTimerID, kTimerElapse);
+
+  // InitListCtrl();
+  RefreshListCtrl();
+  RefreshStatusBar();
+  
+  return true;
+}
+#endif
+
 
 void CPanel::OnDestroy()
 {
+  printf("CPanel::OnDestroy\n");
+
   SaveListViewInfo();
   CWindow2::OnDestroy();
 }
 
+#ifdef _WIN32
 void CPanel::ChangeWindowSize(int xSize, int ySize)
 {
-  if ((HWND)*this == 0)
-    return;
   int kHeaderSize;
   int kStatusBarSize;
   // int kStatusBar2Size;
@@ -604,8 +695,6 @@ void CPanel::ChangeWindowSize(int xSize, int ySize)
 
 bool CPanel::OnSize(WPARAM /* wParam */, int xSize, int ySize)
 {
-  if ((HWND)*this == 0)
-    return true;
   if (_headerReBar)
     _headerReBar.Move(0, 0, xSize, 0);
   ChangeWindowSize(xSize, ySize);
@@ -626,6 +715,7 @@ bool CPanel::OnNotifyReBar(LPNMHDR header, LRESULT & /* result */)
   }
   return false;
 }
+#endif
 
 bool CPanel::OnNotify(UINT /* controlID */, LPNMHDR header, LRESULT &result)
 {
@@ -633,19 +723,23 @@ bool CPanel::OnNotify(UINT /* controlID */, LPNMHDR header, LRESULT &result)
     return false;
   if (header->hwndFrom == _headerComboBox)
     return OnNotifyComboBox(header, result);
+#ifdef _WIN32
   else if (header->hwndFrom == _headerReBar)
     return OnNotifyReBar(header, result);
-  // if (header->hwndFrom == _listView)
+#endif
   else if (header->hwndFrom == _listView)
     return OnNotifyList(header, result);
+#ifdef _WIN32
   else if (::GetParent(header->hwndFrom) == _listView &&
       header->code == NM_RCLICK)
-    return OnRightClick((MY_NMLISTVIEW_NMITEMACTIVATE *)header, result);
+    return OnRightClick((LPNMITEMACTIVATE)header, result);
+#endif
   return false;
 }
 
 bool CPanel::OnCommand(int code, int itemID, LPARAM lParam, LRESULT &result)
 {
+  printf("CPanel::OnCommand(code=%d,itemID=%d)\n",code,itemID);
   if (itemID == kParentFolderID)
   {
     OpenParentFolder();
@@ -676,11 +770,15 @@ void CPanel::MessageBox(LPCWSTR message)
   { MessageBox(message, L"7-Zip"); }
 void CPanel::MessageBoxMyError(LPCWSTR message)
   { MessageBox(message, L"Error"); }
-
-
 void CPanel::MessageBoxError(HRESULT errorCode, LPCWSTR caption)
 {
-  MessageBox(HResultToMessage(errorCode), caption);
+  UString message;
+  if (errorCode == E_OUTOFMEMORY)
+    message = LangString(IDS_MEM_ERROR, 0x0200060B);
+  else
+    if (!NError::MyFormatMessage(errorCode, message))
+      message = L"Error";
+  MessageBox(message, caption);
 }
 
 void CPanel::MessageBoxError(HRESULT errorCode)
@@ -704,8 +802,10 @@ void CPanel::SetFocusToLastRememberedItem()
 {
   if (_lastFocusedIsList)
     SetFocusToList();
+#ifdef _WIN32 // FIXME
   else
     _headerComboBox.SetFocus();
+#endif
 }
 
 UString CPanel::GetFolderTypeID() const
@@ -733,7 +833,7 @@ bool CPanel::IsArcFolder() const
 
 UString CPanel::GetFsPath() const
 {
-  if (IsFSDrivesFolder() && !IsDeviceDrivesPrefix())
+  if (IsFSDrivesFolder())
     return UString();
   return _currentFolderPrefix;
 }
@@ -769,6 +869,7 @@ bool CPanel::DoesItSupportOperations() const
 
 void CPanel::SetListViewMode(UInt32 index)
 {
+#ifdef _WIN32 // FIXME
   if (index >= 4)
     return;
   _ListViewMode = index;
@@ -777,22 +878,19 @@ void CPanel::SetListViewMode(UInt32 index)
   if ((oldStyle & LVS_TYPEMASK) != newStyle)
     _listView.SetStyle((oldStyle & ~LVS_TYPEMASK) | newStyle);
   // RefreshListCtrlSaveFocused();
+#endif
 }
 
 void CPanel::ChangeFlatMode()
 {
   _flatMode = !_flatMode;
-  if (_parentFolders.Size() > 0)
-    _flatModeForArc = _flatMode;
-  else
-    _flatModeForDisk = _flatMode;
   RefreshListCtrlSaveFocused();
 }
 
 
 void CPanel::RefreshStatusBar()
 {
-  PostMessage(kRefreshStatusBar);
+  // FIXME PostMessage(kRefreshStatusBar);
 }
 
 void CPanel::AddToArchive()
@@ -920,7 +1018,7 @@ HRESULT CThreadTest::ProcessVirt()
     OkMessage = s;
   }
   return S_OK;
-}
+};
 
 /*
 static void AddSizePair(UINT resourceID, UInt32 langID, UInt64 value, UString &s)

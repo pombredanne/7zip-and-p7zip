@@ -3,7 +3,7 @@
 #ifndef __FILESTREAMS_H
 #define __FILESTREAMS_H
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(ENV_UNIX)
 #define USE_WIN_FILE
 #endif
 
@@ -14,7 +14,6 @@
 #endif
 
 #include "../../Common/MyCom.h"
-
 #include "../IStream.h"
 
 class CInFileStream:
@@ -22,25 +21,16 @@ class CInFileStream:
   public IStreamGetSize,
   public CMyUnknownImp
 {
+  bool _ignoreSymbolicLink;
 public:
   #ifdef USE_WIN_FILE
   NWindows::NFile::NIO::CInFile File;
-  #ifdef SUPPORT_DEVICE_FILE
-  UInt64 VirtPos;
-  UInt64 PhyPos;
-  UInt64 BufferStartPos;
-  Byte *Buffer;
-  UInt32 BufferSize;
-  #endif
   #else
   NC::NFile::NIO::CInFile File;
   #endif
-  virtual ~CInFileStream();
+  CInFileStream(bool b=false) { _ignoreSymbolicLink = b; }
+  virtual ~CInFileStream() {}
 
-  #ifdef SUPPORT_DEVICE_FILE
-  CInFileStream();
-  #endif
-  
   bool Open(LPCTSTR fileName);
   #ifdef USE_WIN_FILE
   #ifndef _UNICODE

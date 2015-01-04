@@ -29,6 +29,7 @@ static const UINT kSystemStartMenuID = kPluginMenuStartID + 100;
 
 void CPanel::InvokeSystemCommand(const char *command)
 {
+#ifdef _WIN32
   NCOM::CComInitializer comInitializer;
   if (!IsFsOrPureDrivesFolder())
     return;
@@ -46,6 +47,7 @@ void CPanel::InvokeSystemCommand(const char *command)
   ci.hwnd = GetParent();
   ci.lpVerb = command;
   contextMenu->InvokeCommand(&ci);
+#endif
 }
 
 static const wchar_t *kSeparator = L"----------------------------\n";
@@ -284,6 +286,7 @@ void CPanel::EditPaste()
   // InvokeSystemCommand("paste");
 }
 
+#ifdef _WIN32
 HRESULT CPanel::CreateShellContextMenu(
     const CRecordVector<UInt32> &operatedIndices,
     CMyComPtr<IContextMenu> &systemContextMenu)
@@ -677,3 +680,5 @@ bool CPanel::OnContextMenu(HANDLE windowHandle, int xPos, int yPos)
     return true;
   return true;
 }
+#endif
+

@@ -22,6 +22,7 @@ HINSTANCE g_hInstance;
 
 #define NT_CHECK_FAIL_ACTION return FALSE;
 
+#ifdef _WIN32
 extern "C"
 BOOL WINAPI DllMain(
   #ifdef UNDER_CE
@@ -38,6 +39,7 @@ BOOL WINAPI DllMain(
   }
   return TRUE;
 }
+#endif
 
 DEFINE_GUID(CLSID_CArchiveHandler,
 0x23170F69, 0x40C1, 0x278A, 0x10, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x00);

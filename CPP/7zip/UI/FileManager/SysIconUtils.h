@@ -45,6 +45,7 @@ DWORD_PTR GetRealIconIndex(LPCWSTR path, DWORD attrib, int &iconIndex);
 #endif
 int GetIconIndexForCSIDL(int csidl);
 
+#ifdef WIN32
 inline HIMAGELIST GetSysImageList(bool smallIcons)
 {
   SHFILEINFO shellInfo;
@@ -53,5 +54,6 @@ inline HIMAGELIST GetSysImageList(bool smallIcons)
       &shellInfo, sizeof(shellInfo),
       SHGFI_USEFILEATTRIBUTES | SHGFI_SYSICONINDEX | (smallIcons ? SHGFI_SMALLICON : SHGFI_ICON));
 }
+#endif
 
 #endif

@@ -83,6 +83,7 @@ void AesGenTables(void)
   g_AesCbc_Encode = AesCbc_Encode;
   g_AesCbc_Decode = AesCbc_Decode;
   g_AesCtr_Code = AesCtr_Code;
+/* FIXME
   #ifdef MY_CPU_X86_OR_AMD64
   if (CPU_Is_Aes_Supported())
   {
@@ -91,6 +92,7 @@ void AesGenTables(void)
     g_AesCtr_Code = AesCtr_Code_Intel;
   }
   #endif
+*/
 }
 
 #define HT(i, x, s) (T + (x << 8))[gb ## x(s[(i + x) & 3])]

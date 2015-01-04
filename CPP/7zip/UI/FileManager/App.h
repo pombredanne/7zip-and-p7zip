@@ -3,8 +3,8 @@
 #ifndef __APP_H
 #define __APP_H
 
-#include "Windows/Control/CommandBar.h"
-#include "Windows/Control/ImageList.h"
+// #include "Windows/Control/CommandBar.h"
+// #include "Windows/Control/ImageList.h"
 
 #include "AppState.h"
 #include "Panel.h"
@@ -48,6 +48,7 @@ public:
 
 class CApp;
 
+#if _WIN32
 class CDropTarget:
   public IDropTarget,
   public CMyUnknownImp
@@ -100,6 +101,7 @@ public:
   int SrcPanelIndex;              // index of D&D source_panel
   int TargetPanelIndex;           // what panel to use as target_panel of Application
 };
+#endif
 
 class CApp
 {
@@ -119,6 +121,7 @@ public:
   CPanel Panels[kNumPanelsMax];
   bool PanelsCreated[kNumPanelsMax];
 
+#ifdef _WIN32
   NWindows::NControl::CImageList _buttonsImageList;
 
   #ifdef UNDER_CE
@@ -128,32 +131,39 @@ public:
 
   CDropTarget *_dropTargetSpec;
   CMyComPtr<IDropTarget> _dropTarget;
+#endif
 
   CApp(): _window(0), NumPanels(2), LastFocusedPanel(0) {}
 
+#ifdef _WIN32
   void CreateDragTarget()
   {
     _dropTargetSpec = new CDropTarget();
     _dropTarget = _dropTargetSpec;
     _dropTargetSpec->App = (this);
   }
+#endif
 
   void SetFocusedPanel(int index)
   {
     LastFocusedPanel = index;
-    _dropTargetSpec->TargetPanelIndex = LastFocusedPanel;
+    // FIXME _dropTargetSpec->TargetPanelIndex = LastFocusedPanel;
   }
 
   void DragBegin(int panelIndex)
   {
+#ifdef _WIN32
     _dropTargetSpec->TargetPanelIndex = (NumPanels > 1) ? 1 - panelIndex : panelIndex;
     _dropTargetSpec->SrcPanelIndex = panelIndex;
+#endif
   }
 
   void DragEnd()
   {
+#ifdef _WIN32
     _dropTargetSpec->TargetPanelIndex = LastFocusedPanel;
     _dropTargetSpec->SrcPanelIndex = -1;
+#endif
   }
 
   
@@ -168,7 +178,7 @@ public:
   void Release();
 
   // void SetFocus(int panelIndex) { Panels[panelIndex].SetFocusToList(); }
-  void SetFocusToLastItem() { Panels[LastFocusedPanel].SetFocusToLastRememberedItem(); }
+  // void SetFocusToLastItem() { Panels[LastFocusedPanel].SetFocusToLastRememberedItem(); }
   int GetFocusedPanelIndex() const { return LastFocusedPanel; }
   bool IsPanelVisible(int index) const { return (NumPanels > 1 || index == LastFocusedPanel); }
   CPanel &GetFocusedPanel() { return Panels[GetFocusedPanelIndex()]; }
@@ -302,7 +312,9 @@ public:
   void ExtractArchives() { GetFocusedPanel().ExtractArchives(); }
   void TestArchives() { GetFocusedPanel().TestArchives(); }
 
+#ifdef _WIN32
   void OnNotify(int ctrlID, LPNMHDR pnmh);
+#endif
 
   UString PrevTitle;
   void RefreshTitle(bool always = false);

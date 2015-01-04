@@ -47,7 +47,7 @@ struct CArchiveCommandLineOptions
 {
   bool HelpMode;
 
-  #ifdef _WIN32
+  #ifdef _7ZIP_LARGE_PAGES
   bool LargePages;
   #endif
 

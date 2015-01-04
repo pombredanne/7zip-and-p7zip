@@ -123,6 +123,7 @@ bool CItem::IsDir() const
   }
 }
 
+#ifndef FILE_ATTRIBUTE_UNIX_EXTENSION
 UInt32 CLocalItem::GetWinAttributes() const
 {
   DWORD winAttributes = 0;
@@ -130,6 +131,7 @@ UInt32 CLocalItem::GetWinAttributes() const
     winAttributes |= FILE_ATTRIBUTE_DIRECTORY;
   return winAttributes;
 }
+#endif
 
 UInt32 CItem::GetWinAttributes() const
 {
@@ -141,6 +143,13 @@ UInt32 CItem::GetWinAttributes() const
       if (FromCentral)
         winAttributes = ExternalAttributes;
       break;
+#ifdef FILE_ATTRIBUTE_UNIX_EXTENSION
+    case NFileHeader::NHostOS::kUnix:
+        winAttributes = (ExternalAttributes & 0xFFFF0000) | FILE_ATTRIBUTE_UNIX_EXTENSION; 
+        if (winAttributes & (NFileHeader::NUnixAttribute::kIFDIR << 16))
+		winAttributes |= FILE_ATTRIBUTE_DIRECTORY;
+        return winAttributes;
+#endif
     default:
       winAttributes = 0; // must be converted from unix value;
   }

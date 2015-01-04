@@ -53,7 +53,7 @@
 #define IDM_OPTIONS                     510
 #define IDM_BENCHMARK                   511
 #define IDM_HELP_CONTENTS               610
-#define IDM_ABOUT                       620
+#define IDM_ABOUT                       5014  /* FIXME 620    5014 = wxID_ABOUT */
 #define IDS_BOOKMARK                    720
 #define IDB_ADD                         2002
 #define IDB_EXTRACT                     2003

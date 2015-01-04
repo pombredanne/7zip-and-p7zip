@@ -1,45 +1,33 @@
-PROG = 7z.exe
-MY_CONSOLE = 1
-CFLAGS = $(CFLAGS) -I ../../../
+PROG=../../../../bin/Client7z$(BINSUFFIX)
 
-CONSOLE_OBJS = \
-  $O\Client7z.obj \
+LOCAL_FLAGS=-DUNICODE -D_UNICODE
 
-COMMON_OBJS = \
-  $O\IntToString.obj \
-  $O\NewHandler.obj \
-  $O\MyString.obj \
-  $O\StringConvert.obj \
-  $O\StringToInt.obj \
-  $O\MyVector.obj \
-  $O\Wildcard.obj \
+include ../../../../makefile.crc32
+include ../../../../makefile.machine
 
-WIN_OBJS = \
-  $O\DLL.obj \
-  $O\FileDir.obj \
-  $O\FileFind.obj \
-  $O\FileIO.obj \
-  $O\FileName.obj \
-  $O\PropVariant.obj \
-  $O\PropVariantConversions.obj \
+PCH_NAME=$(PRE_COMPILED_HEADER)
 
-7ZIP_COMMON_OBJS = \
-  $O\FileStreams.obj \
+LIBS=$(LOCAL_LIBS_DLL)
 
 OBJS = \
-  $O\StdAfx.obj \
-  $(CONSOLE_OBJS) \
-  $(COMMON_OBJS) \
-  $(WIN_OBJS) \
-  $(7ZIP_COMMON_OBJS) \
+wine_date_and_time.o \
+MyWindows.o \
+DLL.o \
+FileDir.o \
+FileFind.o \
+FileIO.o \
+FileName.o \
+PropVariant.o \
+PropVariantConversions.o \
+IntToString.o \
+MyString.o \
+StringConvert.o \
+UTFConvert.o \
+MyVector.o \
+Wildcard.o \
+FileStreams.o \
+Threads.o \
+Client7z.o
 
-!include "../../../Build.mak"
+include ../../../../makefile.glb
 
-$(CONSOLE_OBJS): $(*B).cpp
-	$(COMPL)
-$(COMMON_OBJS): ../../../Common/$(*B).cpp
-	$(COMPL)
-$(WIN_OBJS): ../../../Windows/$(*B).cpp
-	$(COMPL)
-$(7ZIP_COMMON_OBJS): ../../Common/$(*B).cpp
-	$(COMPL)

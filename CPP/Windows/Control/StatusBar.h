@@ -6,12 +6,23 @@
 #include "Windows/Window.h"
 #include "Windows/Defs.h"
 
+class wxStatusBar;
+
 namespace NWindows {
 namespace NControl {
 
-class CStatusBar: public NWindows::CWindow
+class CStatusBar // : public NWindows::CWindow
 {
+	wxStatusBar * _statusBar;
 public:
+	CStatusBar() : _statusBar(0) {}
+
+	void Attach(wxWindow * newWindow);
+	wxWindow * Detach();
+
+	void SetText(int index, LPCTSTR text);
+	
+/* FIXME
   bool Create(LONG style, LPCTSTR text, HWND hwndParent, UINT id)
     { return (_window = ::CreateStatusWindow(style, text, hwndParent, id)) != 0; }
   bool SetParts(int numParts, const int *edgePostions)
@@ -36,8 +47,10 @@ public:
   bool SetText(int index, LPCWSTR text)
     { return SetText(index, text, 0); }
   #endif
+*/  
 };
 
 }}
 
 #endif
+

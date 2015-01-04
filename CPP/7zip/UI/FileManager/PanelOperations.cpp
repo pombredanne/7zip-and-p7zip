@@ -50,13 +50,15 @@ public:
   
   HRESULT Result;
 
-  CThreadFolderOperations(EFolderOpType opType): OpType(opType), Result(E_FAIL) {}
+  CThreadFolderOperations(EFolderOpType opType): OpType(opType), Result(E_FAIL) {};
   HRESULT DoOperation(CPanel &panel, const UString &progressTitle, const UString &titleError);
 };
   
 HRESULT CThreadFolderOperations::ProcessVirt()
 {
+#ifdef _WIN32
   NCOM::CComInitializer comInitializer;
+#endif
   switch(OpType)
   {
     case FOLDER_TYPE_CREATE_FOLDER:
@@ -72,7 +74,7 @@ HRESULT CThreadFolderOperations::ProcessVirt()
       Result = E_FAIL;
   }
   return Result;
-}
+};
 
 
 HRESULT CThreadFolderOperations::DoOperation(CPanel &panel, const UString &progressTitle, const UString &titleError)
@@ -81,7 +83,7 @@ HRESULT CThreadFolderOperations::DoOperation(CPanel &panel, const UString &progr
   UpdateCallback = UpdateCallbackSpec;
   UpdateCallbackSpec->ProgressDialog = &ProgressDialog;
 
-  ProgressDialog.WaitMode = true;
+  // FIXME ProgressDialog.WaitMode = true;
   ProgressDialog.Sync.SetErrorMessageTitle(titleError);
   Result = S_OK;
 
@@ -172,6 +174,7 @@ void CPanel::DeleteItems(bool toRecycleBin)
       }
       buffer.EnsureCapacity(size + 1);
       ((WCHAR *)buffer)[size] = 0;
+#ifdef _WIN32
       if (maxLen >= MAX_PATH)
       {
         if (toRecycleBin)
@@ -205,6 +208,10 @@ void CPanel::DeleteItems(bool toRecycleBin)
         res = shFileOperationW(&fo);
         #endif
       }
+#else
+      // FIXME - how to use the recycle bin undex Gnome or KDE ?
+      useInternalDelete = true;
+#endif
     }
     /*
     if (fo.fAnyOperationsAborted)
@@ -273,6 +280,7 @@ void CPanel::DeleteItemsInternal(CRecordVector<UInt32> &indices)
   RefreshTitleAlways();
 }
 
+#ifdef _WIN32
 BOOL CPanel::OnBeginLabelEdit(LV_DISPINFOW * lpnmh)
 {
   int realIndex = GetRealIndex(lpnmh->item);
@@ -333,6 +341,7 @@ BOOL CPanel::OnEndLabelEdit(LV_DISPINFOW * lpnmh)
   PostMessage(kReLoadMessage);
   return TRUE;
 }
+#endif
 
 void CPanel::CreateFolder()
 {
@@ -451,7 +460,8 @@ void CPanel::ChangeComment()
   comboDialog.Static = LangString(IDS_COMMENT2, 0x03020291);
   if (comboDialog.Create(GetParent()) == IDCANCEL)
     return;
-  NCOM::CPropVariant propVariant = comboDialog.Value;
+  // FIXME NCOM::CPropVariant propVariant = comboDialog.Value;
+  NCOM::CPropVariant propVariant(comboDialog.Value);
 
   HRESULT result = folderOperations->SetProperty(realIndex, kpidComment, &propVariant, NULL);
   if (result != S_OK)

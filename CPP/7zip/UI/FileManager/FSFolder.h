@@ -85,7 +85,7 @@ private:
 
   bool _flatMode;
 
-  NWindows::NFile::NFind::CFindChangeNotification _findChangeNotification;
+  // FIXME NWindows::NFile::NFind::CFindChangeNotification _findChangeNotification;
 
   HRESULT GetItemsFullSize(const UInt32 *indices, UInt32 numItems,
       UInt64 &numFolders, UInt64 &numFiles, UInt64 &size, IProgress *progress);

@@ -8,23 +8,22 @@
 #include "Common/MyCom.h"
 
 #include "Windows/DLL.h"
-#include "Windows/FileDir.h"
 #include "Windows/FileFind.h"
-#include "Windows/Handle.h"
+#include "Windows/FileDir.h"
 #include "Windows/Synchronization.h"
 
 #include "Windows/Control/ComboBox.h"
 #include "Windows/Control/Edit.h"
 #include "Windows/Control/ListView.h"
-#include "Windows/Control/ReBar.h"
+// #include "Windows/Control/ReBar.h"
 #include "Windows/Control/Static.h"
 #include "Windows/Control/StatusBar.h"
-#include "Windows/Control/ToolBar.h"
+// #include "Windows/Control/ToolBar.h"
 #include "Windows/Control/Window2.h"
 
 #include "AppState.h"
 #include "IFolder.h"
-#include "MyCom2.h"
+//#include "MyCom2.h"
 #include "ProgressDialog2.h"
 #include "SysIconUtils.h"
 
@@ -37,7 +36,11 @@ const int kParentIndex = -1;
 #ifdef UNDER_CE
 #define ROOT_FS_FOLDER L"\\"
 #else
+#ifdef _WIN32
 #define ROOT_FS_FOLDER L"C:\\\\"
+#else
+#define ROOT_FS_FOLDER L"\\"
+#endif
 #endif
 
 struct CPanelCallback
@@ -127,12 +130,11 @@ struct CFolderLink: public CTempFileInfo
 
 enum MyMessages
 {
-  kShiftSelectMessage = WM_USER + 1,
+  kShiftSelectMessage = 20000, // FIXME  = WM_USER + 1,
   kReLoadMessage,
   kSetFocusToListView,
   kOpenItemChanged,
-  kRefreshStatusBar,
-  kRefreshHeaderComboBox
+  kRefreshStatusBar
 };
 
 UString GetFolderPath(IFolderFolder * folder);
@@ -173,13 +175,7 @@ struct CSelectedState
   CSelectedState(): FocusedItem(-1), SelectFocused(false) {}
 };
 
-#ifdef UNDER_CE
-#define MY_NMLISTVIEW_NMITEMACTIVATE NMLISTVIEW
-#else
-#define MY_NMLISTVIEW_NMITEMACTIVATE NMITEMACTIVATE
-#endif
-
-class CPanel: public NWindows::NControl::CWindow2
+class CPanel :public NWindows::NControl::CWindow2
 {
   CExtToIconMap _extToIconMap;
   UINT _baseID;
@@ -191,16 +187,16 @@ class CPanel: public NWindows::NControl::CWindow2
   bool OnCommand(int code, int itemID, LPARAM lParam, LRESULT &result);
   LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
   virtual bool OnCreate(CREATESTRUCT *createStruct);
-  virtual bool OnSize(WPARAM wParam, int xSize, int ySize);
+  // FIXME virtual bool OnSize(WPARAM wParam, int xSize, int ySize);
   virtual void OnDestroy();
   virtual bool OnNotify(UINT controlID, LPNMHDR lParam, LRESULT &result);
 
   void AddComboBoxItem(const UString &name, int iconIndex, int indent, bool addToList);
 
   bool OnComboBoxCommand(UINT code, LPARAM param, LRESULT &result);
-  
+
   #ifndef UNDER_CE
-  
+
   LRESULT OnNotifyComboBoxEnter(const UString &s);
   bool OnNotifyComboBoxEndEdit(PNMCBEENDEDITW info, LRESULT &result);
   #ifndef _UNICODE
@@ -209,23 +205,25 @@ class CPanel: public NWindows::NControl::CWindow2
 
   #endif
 
-  bool OnNotifyReBar(LPNMHDR lParam, LRESULT &result);
+  // FIXME bool OnNotifyReBar(LPNMHDR lParam, LRESULT &result);
   bool OnNotifyComboBox(LPNMHDR lParam, LRESULT &result);
   void OnItemChanged(NMLISTVIEW *item);
-  void OnNotifyActivateItems();
   bool OnNotifyList(LPNMHDR lParam, LRESULT &result);
-  void OnDrag(LPNMLISTVIEW nmListView);
-  bool OnKeyDown(LPNMLVKEYDOWN keyDownInfo, LRESULT &result);
-  BOOL OnBeginLabelEdit(LV_DISPINFOW * lpnmh);
-  BOOL OnEndLabelEdit(LV_DISPINFOW * lpnmh);
+  // FIXME void OnDrag(LPNMLISTVIEW nmListView);
+  // FIXME bool OnKeyDown(LPNMLVKEYDOWN keyDownInfo, LRESULT &result);
+  // FIXME BOOL OnBeginLabelEdit(LV_DISPINFOW * lpnmh);
+  // FIXME BOOL OnEndLabelEdit(LV_DISPINFOW * lpnmh);
   void OnColumnClick(LPNMLISTVIEW info);
-  bool OnCustomDraw(LPNMLVCUSTOMDRAW lplvcd, LRESULT &result);
+  // FIXME bool OnCustomDraw(LPNMLVCUSTOMDRAW lplvcd, LRESULT &result);
 
 public:
   HWND _mainWindow;
   CPanelCallback *_panelCallback;
 
-  void SysIconsWereChanged() { _extToIconMap.Clear(); }
+/* FIXME BEGIN */
+  HWND GetParent() { return 0; }
+   operator HWND() const { return 0; }
+/* FIXME END */
 
   void DeleteItems(bool toRecycleBin);
   void DeleteItemsInternal(CRecordVector<UInt32> &indices);
@@ -236,12 +234,12 @@ private:
 
   void ChangeWindowSize(int xSize, int ySize);
  
-  HRESULT InitColumns();
+  void InitColumns();
   // void InitColumns2(PROPID sortID);
   void InsertColumn(int index);
 
   void SetFocusedSelectedItem(int index, bool select);
-  HRESULT RefreshListCtrl(const UString &focusedName, int focusedPos, bool selectFocused,
+  void RefreshListCtrl(const UString &focusedName, int focusedPos, bool selectFocused,
       const UStringVector &selectedNames);
 
   void OnShiftSelectMessage();
@@ -251,6 +249,7 @@ private:
   // void OnUpWithShift();
   // void OnDownWithShift();
 public:
+  void myTests();
   void UpdateSelection();
   void SelectSpec(bool selectMode);
   void SelectByType(bool selectMode);
@@ -264,16 +263,9 @@ private:
   // CRecordVector<PROPID> m_ColumnsPropIDs;
 
 public:
-  NWindows::NControl::CReBar _headerReBar;
-  NWindows::NControl::CToolBar _headerToolBar;
-  NWindows::NControl::
-    #ifdef UNDER_CE
-    CComboBox
-    #else
-    CComboBoxEx
-    #endif
-    _headerComboBox;
-  UStringVector ComboBoxPaths;
+  // FIXME NWindows::NControl::CReBar _headerReBar;
+  // FIXME NWindows::NControl::CToolBar _headerToolBar;
+  NWindows::NControl::CComboBoxEx _headerComboBox;
   // CMyComboBox _headerComboBox;
   CMyComboBoxEdit _comboBoxEdit;
   CMyListView _listView;
@@ -291,8 +283,6 @@ public:
   CBoolVector _selectedStatusVector;
 
   CSelectedState _selectedState;
-
-  HWND GetParent();
 
   UInt32 GetRealIndex(const LVITEMW &item) const
   {
@@ -315,7 +305,7 @@ public:
   }
 
   UInt32 _ListViewMode;
-  int _xSize;
+  int _xSize; 
 
   bool _flatMode;
   bool _flatModeForDisk;
@@ -335,8 +325,8 @@ public:
 
   void GetSelectedNames(UStringVector &selectedNames);
   void SaveSelectedState(CSelectedState &s);
-  HRESULT RefreshListCtrl(const CSelectedState &s);
-  HRESULT RefreshListCtrlSaveFocused();
+  void RefreshListCtrl(const CSelectedState &s);
+  void RefreshListCtrlSaveFocused();
 
   UString GetItemName(int itemIndex) const;
   UString GetItemPrefix(int itemIndex) const;
@@ -395,10 +385,13 @@ public:
       _dontShowMode(false)
   {}
 
+
   void SetExtendedStyle()
   {
+/* FIXME	  
     if (_listView != 0)
       _listView.SetExtendedListViewStyle(_exStyle);
+      */
   }
 
 
@@ -414,33 +407,34 @@ public:
 
   void Release();
   ~CPanel();
-  void OnLeftClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActivate);
-  bool OnRightClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActivate, LRESULT &result);
-  void ShowColumnsContextMenu(int x, int y);
+  // FIXME void OnLeftClick(LPNMITEMACTIVATE itemActivate);
+  // FIXME bool OnRightClick(LPNMITEMACTIVATE itemActivate, LRESULT &result);
 
   void OnTimer();
   void OnReload();
   bool OnContextMenu(HANDLE windowHandle, int xPos, int yPos);
 
+#ifdef _WIN32 
   CMyComPtr<IContextMenu> _sevenZipContextMenu;
   CMyComPtr<IContextMenu> _systemContextMenu;
   HRESULT CreateShellContextMenu(
       const CRecordVector<UInt32> &operatedIndices,
       CMyComPtr<IContextMenu> &systemContextMenu);
-  void CreateSystemMenu(HMENU menu,
+  void CreateSystemMenu(HMENU menu, 
       const CRecordVector<UInt32> &operatedIndices,
       CMyComPtr<IContextMenu> &systemContextMenu);
-  void CreateSevenZipMenu(HMENU menu,
+  void CreateSevenZipMenu(HMENU menu, 
       const CRecordVector<UInt32> &operatedIndices,
       CMyComPtr<IContextMenu> &sevenZipContextMenu);
-  void CreateFileMenu(HMENU menu,
+  void CreateFileMenu(HMENU menu, 
       CMyComPtr<IContextMenu> &sevenZipContextMenu,
       CMyComPtr<IContextMenu> &systemContextMenu,
       bool programMenu);
   void CreateFileMenu(HMENU menu);
   bool InvokePluginCommand(int id);
-  bool InvokePluginCommand(int id, IContextMenu *sevenZipContextMenu,
+  bool InvokePluginCommand(int id, IContextMenu *sevenZipContextMenu, 
       IContextMenu *systemContextMenu);
+#endif // ifdef _WIN32 
 
   void InvokeSystemCommand(const char *command);
   void Properties();
@@ -491,24 +485,24 @@ public:
     CPanel &_panel;
     public:
 
-    CDisableTimerProcessing(CPanel &panel): _panel(panel)
-    {
+    CDisableTimerProcessing(CPanel &panel): _panel(panel) 
+    { 
       Disable();
     }
     void Disable()
     {
       _processTimerMem = _panel._processTimer;
       _processNotifyMem = _panel._processNotify;
-      _panel._processTimer = false;
-      _panel._processNotify = false;
+      _panel._processTimer = false; 
+      _panel._processNotify = false; 
     }
     void Restore()
     {
-      _panel._processTimer = _processTimerMem;
-      _panel._processNotify = _processNotifyMem;
+      _panel._processTimer = _processTimerMem; 
+      _panel._processNotify = _processNotifyMem; 
     }
-    ~CDisableTimerProcessing()
-    {
+    ~CDisableTimerProcessing() 
+    { 
       Restore();
     }
     CDisableTimerProcessing& operator=(const CDisableTimerProcessing &) {; }
@@ -517,7 +511,7 @@ public:
   // bool _passwordIsDefined;
   // UString _password;
 
-  HRESULT RefreshListCtrl();
+  void RefreshListCtrl();
 
   void MessageBoxInfo(LPCWSTR message, LPCWSTR caption);
   void MessageBox(LPCWSTR message);
@@ -559,11 +553,11 @@ public:
   void ChangeComment();
 
   void SetListViewMode(UInt32 index);
-  UInt32 GetListViewMode() const { return _ListViewMode; }
+  UInt32 GetListViewMode() const { return _ListViewMode; };
   PROPID GetSortID() const { return _sortID; }
 
   void ChangeFlatMode();
-  bool GetFlatMode() const { return _flatMode; }
+  bool GetFlatMode() const { return _flatMode; };
 
   void RefreshStatusBar();
   void OnRefreshStatusBar();
@@ -592,22 +586,24 @@ public:
     return CopyTo(indices, folder, moveMode, showErrorMessages, messages, usePassword, password);
   }
 
-  HRESULT CopyFrom(const UString &folderPrefix, const UStringVector &filePaths,
+  HRESULT CopyFrom(const UString &folderPrefix, const UStringVector &filePaths, 
       bool showErrorMessages, UStringVector *messages);
 
   void CopyFromNoAsk(const UStringVector &filePaths);
   void CopyFromAsk(const UStringVector &filePaths);
 
   // empty folderPath means create new Archive to path of first fileName.
+ #ifdef _WIN32
   void DropObject(IDataObject * dataObject, const UString &folderPath);
 
   // empty folderPath means create new Archive to path of first fileName.
   void CompressDropFiles(const UStringVector &fileNames, const UString &folderPath);
+#endif
 
   void RefreshTitle(bool always = false) { _panelCallback->RefreshTitle(always);  }
   void RefreshTitleAlways() { RefreshTitle(true);  }
 
-  UString GetItemsInfoString(const CRecordVector<UInt32> &indices);
+  UString GetItemsInfoString(const CRecordVector<UInt32> &indices);  
 };
 
 class CMyBuffer

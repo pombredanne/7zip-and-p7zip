@@ -40,7 +40,9 @@ using namespace NCOM;
 using namespace NFile;
 using namespace NName;
 
+#ifdef _WIN32
 static const wchar_t *kTempFolderPrefix = L"7zE";
+#endif
 
 using namespace NUpdateArchive;
 

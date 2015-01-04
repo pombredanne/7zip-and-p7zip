@@ -2,16 +2,16 @@
 
 #include "StdAfx.h"
 
-#include "Common/MyInitGuid.h"
+#include <initguid.h>
 
 #include "../../../../C/Alloc.h"
 
 #include "Common/CommandLineParser.h"
 #include "Common/MyException.h"
+#include "Common/NewHandler.h"
 #include "Common/StringConvert.h"
 
 #include "Windows/Error.h"
-#include "Windows/NtCheck.h"
 #ifdef _WIN32
 #include "Windows/MemoryLock.h"
 #endif
@@ -25,16 +25,15 @@
 #include "ExtractGUI.h"
 #include "UpdateGUI.h"
 
+#include "Windows/FileDir.h" // FIXME
+
 #include "ExtractRes.h"
 
 using namespace NWindows;
 
 HINSTANCE g_hInstance;
 #ifndef _UNICODE
-#endif
-
-#ifdef UNDER_CE
-bool g_LVN_ITEMACTIVATE_Support = true;
+bool g_IsNT = false;
 #endif
 
 static void ErrorMessage(LPCWSTR message)
@@ -63,10 +62,15 @@ static int ShowSysErrorMessage(DWORD errorCode)
   return NExitCode::kFatalError;
 }
 
-static int Main2()
+int Main2(int argc,TCHAR **argv)
 {
   UStringVector commandStrings;
+  #ifdef _WIN32  
   NCommandLineParser::SplitCommandLine(GetCommandLineW(), commandStrings);
+  #else
+  extern void mySplitCommandLineW(int numArguments,TCHAR  **arguments,UStringVector &parts);
+  mySplitCommandLineW(argc,argv,commandStrings);
+  #endif
 
   #ifndef UNDER_CE
   if (commandStrings.Size() > 0)
@@ -77,6 +81,15 @@ static int Main2()
     MessageBoxW(0, L"Specify command", L"7-Zip", 0);
     return 0;
   }
+	
+/*	
+  {
+    CSysString resultPath;
+	NWindows::NFile::NDirectory::MyGetCurrentDirectory(resultPath);
+	
+	::MessageBoxW(0, resultPath, L"7-Zip - curDir", 0);
+  }
+*/
 
   CArchiveCommandLineOptions options;
   CArchiveCommandLineParser parser;
@@ -107,7 +120,7 @@ static int Main2()
     ErrorLangMessage(IDS_UNSUPPORTED_ARCHIVE_TYPE, 0x0200060D);
     return NExitCode::kFatalError;
   }
- 
+
   if (options.Command.CommandType == NCommandType::kBenchmark)
   {
     HRESULT res;
@@ -216,6 +229,7 @@ static int Main2()
 
 #define NT_CHECK_FAIL_ACTION ErrorMessage(L"Unsupported Windows version"); return NExitCode::kFatalError;
 
+#ifdef _WIN32
 int APIENTRY WinMain(HINSTANCE  hInstance, HINSTANCE /* hPrevInstance */,
   #ifdef UNDER_CE
   LPWSTR
@@ -226,7 +240,6 @@ int APIENTRY WinMain(HINSTANCE  hInstance, HINSTANCE /* hPrevInstance */,
 {
   g_hInstance = hInstance;
   #ifdef _WIN32
-  NT_CHECK
   SetLargePageSize();
   #endif
 
@@ -239,6 +252,31 @@ int APIENTRY WinMain(HINSTANCE  hInstance, HINSTANCE /* hPrevInstance */,
   {
     return Main2();
   }
+#else
+int Main1(int argc,TCHAR **argv)
+{
+  ReloadLangSmart(); // ReloadLang();
+	
+	
+  // under MacOSX, a bundle does not keep the current directory
+  // between 7zFM and 7zG ...
+  // So, try to use the environment variable P7ZIP_CURRENT_DIR
+  const char *p7zip_current_dir = getenv("P7ZIP_CURRENT_DIR");
+	
+  if (p7zip_current_dir)
+  {
+    UString currentDir = MultiByteToUnicodeString(p7zip_current_dir);
+		
+    NWindows::NFile::NDirectory::MySetCurrentDirectory(currentDir);
+  }
+
+
+  // setlocale(LC_COLLATE, ".ACP");
+  try
+  {
+    return Main2(argc,argv);
+  }
+#endif
   catch(const CNewException &)
   {
     return ShowMemErrorMessage();

@@ -21,6 +21,10 @@
 #include "7zOut.h"
 #include "7zUpdate.h"
 
+#ifndef WIN32
+#include "Windows/FileIO.h"
+#endif
+
 namespace NArchive {
 namespace N7z {
 
@@ -322,6 +326,7 @@ struct CSolidGroup
   CRecordVector<UInt32> Indices;
 };
 
+#ifdef _WIN32
 static wchar_t *g_ExeExts[] =
 {
   L"dll",
@@ -338,6 +343,36 @@ static bool IsExeExt(const UString &ext)
       return true;
   return false;
 }
+#else
+static bool IsExeFile(const CUpdateItem &ui)
+{
+  if (ui.Attrib & FILE_ATTRIBUTE_UNIX_EXTENSION) {
+    unsigned short st_mode =  ui.Attrib >> 16;
+    if ((st_mode & 00111) && (ui.Size >= 2048))
+    {
+      // file has the execution flag and it's big enought
+      // try to find if the file is a script
+      NWindows::NFile::NIO::CInFile file;
+      if (file.Open(ui.Name))
+      {
+        char buffer[512];
+        UINT32 processedSize;
+        if (file.Read(buffer,sizeof(buffer),processedSize))
+        {
+          for(UInt32 i = 0; i < processedSize ; i++)
+          {
+            if (buffer[i] == 0) 
+	    {
+              return true; // this file is not a text (ascii, utf8, ...) !
+	    }
+          }
+       }
+     }
+   }
+  } 
+  return false;
+}
+#endif
 
 #ifdef USE_86_FILTER
 
@@ -498,7 +533,7 @@ void CFolderOutStream2::ReleaseOutStream()
 
 void CFolderOutStream2::OpenFile()
 {
-  _crcStreamSpec->SetStream((*_extractStatuses)[_currentIndex] ? _outStream : NULL);
+  _crcStreamSpec->SetStream((*_extractStatuses)[_currentIndex] ? (ISequentialOutStream *)_outStream : NULL); // FIXED for gcc 2.95
   _crcStreamSpec->Init(true);
   _fileIsOpen = true;
   _rem = _db->Files[_startIndex + _currentIndex].Size;
@@ -828,9 +863,13 @@ HRESULT Update(
       bool filteredGroup = false;
       if (useFilters)
       {
+#ifdef _WIN32
         int dotPos = ui.Name.ReverseFind(L'.');
         if (dotPos >= 0)
           filteredGroup = IsExeExt(ui.Name.Mid(dotPos + 1));
+#else
+	filteredGroup = IsExeFile(ui);
+#endif
       }
       groups[GetGroupIndex(method.PasswordIsDefined, filteredGroup)].Indices.Add(i);
     }

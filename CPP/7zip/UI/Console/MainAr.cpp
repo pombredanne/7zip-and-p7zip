@@ -2,6 +2,8 @@
 
 #include "StdAfx.h"
 
+#include "Common/NewHandler.h" // FIXME
+
 #include "Common/MyException.h"
 #include "Common/StdOutStream.h"
 

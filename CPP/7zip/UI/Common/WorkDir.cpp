@@ -16,7 +16,7 @@ using namespace NFile;
 UString GetWorkDir(const NWorkDir::CInfo &workDirInfo, const UString &path)
 {
   NWorkDir::NMode::EEnum mode = workDirInfo.Mode;
-  #ifndef UNDER_CE
+  #if  !defined(UNDER_CE) && defined(_WIN32)
   if (workDirInfo.ForRemovableOnly)
   {
     mode = NWorkDir::NMode::kCurrent;

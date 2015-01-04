@@ -114,16 +114,19 @@ void SaveListViewInfo(const UString &id, const CListViewInfo &viewInfo)
   CTempOutBufferSpec buffer;
   UInt32 dataSize = kColumnHeaderSize + kColumnInfoSpecHeader * columns.Size();
   buffer.Init(dataSize);
+	
+	
 
   buffer.WriteUInt32(kColumnInfoVersion);
   buffer.WriteUInt32(viewInfo.SortID);
   buffer.WriteBool(viewInfo.Ascending);
+	
   for(int i = 0; i < columns.Size(); i++)
   {
     const CColumnInfo &column = columns[i];
     buffer.WriteUInt32(column.PropID);
     buffer.WriteBool(column.IsVisible);
-    buffer.WriteUInt32(column.Width);
+    buffer.WriteUInt32(column.Width); 
   }
   {
     NSynchronization::CCriticalSectionLock lock(g_CS);
@@ -194,6 +197,7 @@ struct CPanelsInfo
 };
 */
 
+#ifdef _WIN32
 void SaveWindowSize(const RECT &rect, bool maximized)
 {
   CSysString keyName = kCUBasePath;
@@ -235,6 +239,7 @@ bool ReadWindowSize(RECT &rect, bool &maximized)
   maximized = inBuffer.ReadBool();
   return true;
 }
+#endif
 
 void SavePanelsInfo(UInt32 numPanels, UInt32 currentPanel, UInt32 splitterPos)
 {

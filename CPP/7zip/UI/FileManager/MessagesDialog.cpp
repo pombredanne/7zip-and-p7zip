@@ -75,19 +75,3 @@ bool CMessagesDialog::OnInit()
   NormalizeSize();
   return CModalDialog::OnInit();
 }
-
-bool CMessagesDialog::OnSize(WPARAM /* wParam */, int xSize, int ySize)
-{
-  int mx, my;
-  GetMargins(8, mx, my);
-  int bx, by;
-  GetItemSizes(IDOK, bx, by);
-  int y = ySize - my - by;
-  int x = xSize - mx - bx;
-
-  InvalidateRect(NULL);
-
-  MoveItem(IDOK, x, y, bx, by);
-  _messageList.Move(mx, my, xSize - mx * 2, y - my * 2);
-  return false;
-}

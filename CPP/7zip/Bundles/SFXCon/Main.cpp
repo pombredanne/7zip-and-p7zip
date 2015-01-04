@@ -10,6 +10,10 @@
 #ifdef _WIN32
 #include "Windows/DLL.h"
 #include "Windows/FileDir.h"
+#else
+#include "Common/StringConvert.h"
+#include "Windows/System.h"
+#include "myPrivate.h"
 #endif
 
 #include "../../UI/Common/ExitCode.h"
@@ -25,11 +29,11 @@ using namespace NWindows;
 using namespace NFile;
 using namespace NCommandLineParser;
 
-int g_CodePage = -1;
 extern CStdOutStream *g_StdStream;
 
 static const char *kCopyrightString =
-"\n7-Zip SFX " MY_VERSION_COPYRIGHT_DATE "\n";
+"\n7-Zip SFX " MY_VERSION_COPYRIGHT_DATE "\n"
+"p7zip Version " P7ZIP_VERSION ;
 
 static const int kNumSwitches = 6;
 
@@ -191,7 +195,7 @@ static bool AddNameToCensor(NWildcard::CCensor &wildcardCensor,
     const UString &name, bool include, NRecursedType::EEnum type)
 {
   /*
-  if (!IsWildCardFilePathLegal(name))
+  if(!IsWildCardFilePathLegal(name))
     return false;
   */
   bool isWildCard = DoesNameContainWildCard(name);
@@ -232,7 +236,7 @@ void AddToCensorFromNonSwitchesStrings(NWildcard::CCensor &wildcardCensor,
 static void GetArguments(int numArgs, const char *args[], UStringVector &parts)
 {
   parts.Clear();
-  for (int i = 0; i < numArgs; i++)
+  for(int i = 0; i < numArgs; i++)
   {
     UString s = MultiByteToUnicodeString(args[i]);
     parts.Add(s);
@@ -250,34 +254,26 @@ int Main2(
   SetFileApisToOEM();
   #endif
   
-  g_StdOut << kCopyrightString;
-
   UStringVector commandStrings;
   #ifdef _WIN32
   NCommandLineParser::SplitCommandLine(GetCommandLineW(), commandStrings);
   #else
-  GetArguments(numArgs, args, commandStrings);
+  extern void mySplitCommandLine(int numArgs,const char *args[],UStringVector &parts);
+  mySplitCommandLine(numArgs,args,commandStrings);
   #endif
 
-  #ifdef _WIN32
-  
-  UString arcPath;
-  {
-    UString path;
-    NDLL::MyGetModuleFileName(NULL, path);
-    int fileNamePartStartIndex;
-    if (!NDirectory::MyGetFullPathName(path, arcPath, fileNamePartStartIndex))
-    {
-      g_StdOut << "GetFullPathName Error";
-      return NExitCode::kFatalError;
-    }
-  }
-
-  #else
-
+  // After mySplitCommandLine
+  g_StdOut << kCopyrightString << " (locale=" << my_getlocale() <<",Utf16=";
+  if (global_use_utf16_conversion) g_StdOut << "on";
+  else                             g_StdOut << "off";
+  g_StdOut << ",HugeFiles=";
+  if (sizeof(off_t) >= 8) g_StdOut << "on,";
+  else                    g_StdOut << "off,";
+  int nbcpu = NWindows::NSystem::GetNumberOfProcessors();
+  if (nbcpu > 1) g_StdOut << nbcpu << " CPUs)\n";
+  else           g_StdOut << nbcpu << " CPU)\n";
+ 
   UString arcPath = commandStrings.Front();
-
-  #endif
 
   commandStrings.Delete(0);
 

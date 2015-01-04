@@ -209,7 +209,7 @@ HRESULT CUpdateCallbackConsole::CryptoGetTextPassword2(Int32 *passwordIsDefined,
   {
     if (AskPassword)
     {
-      Password = GetPassword(OutStream);
+      Password = GetPassword(OutStream,true);
       PasswordIsDefined = true;
     }
   }

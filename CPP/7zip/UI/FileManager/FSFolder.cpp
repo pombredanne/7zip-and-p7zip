@@ -15,7 +15,7 @@
 #include "FSDrives.h"
 #include "FSFolder.h"
 
-#ifndef UNDER_CE
+#ifdef _WIN32
 #include "NetFolder.h"
 #endif
 
@@ -52,6 +52,7 @@ HRESULT CFSFolder::Init(const UString &path, IFolderFolder *parentFolder)
   _parentFolder = parentFolder;
   _path = path;
 
+#ifdef _WIN32
   _findChangeNotification.FindFirst(_path, false,
       FILE_NOTIFY_CHANGE_FILE_NAME |
       FILE_NOTIFY_CHANGE_DIR_NAME |
@@ -69,6 +70,7 @@ HRESULT CFSFolder::Init(const UString &path, IFolderFolder *parentFolder)
     if (!findFile.FindFirst(_path + UString(L"*"), fi))
       return lastError;
   }
+#endif
   return S_OK;
 }
 
@@ -83,7 +85,7 @@ HRESULT GetFolderSize(const UString &path, UInt64 &numFolders, UInt64 &numFiles,
     if (fi.IsDir())
     {
       UInt64 subFolders, subFiles, subSize;
-      RINOK(GetFolderSize(path + UString(WCHAR_PATH_SEPARATOR) + fi.Name, subFolders, subFiles, subSize, progress));
+      RINOK(GetFolderSize(path + UString(WSTRING_PATH_SEPARATOR) + fi.Name, subFolders, subFiles, subSize, progress));
       numFolders += subFolders;
       numFolders++;
       numFiles += subFiles;
@@ -105,14 +107,12 @@ HRESULT CFSFolder::LoadSubItems(CDirItem &dirItem, const UString &path)
     CDirItem fi;
     while (enumerator.Next(fi))
     {
-      #ifndef UNDER_CE
       fi.CompressedSizeIsDefined = false;
       /*
       if (!GetCompressedFileSize(_path + fi.Name,
       fi.CompressedSize))
       fi.CompressedSize = fi.Size;
       */
-      #endif
       if (fi.IsDir())
       {
         // fi.Size = GetFolderSize(_path + fi.Name);
@@ -243,7 +243,7 @@ STDMETHODIMP CFSFolder::GetNumberOfSubFolders(UInt32 *numSubFolders)
 }
 */
 
-#ifndef UNDER_CE
+#ifdef _WIN32
 static bool MyGetCompressedFileSizeW(LPCWSTR fileName, UInt64 &size)
 {
   DWORD highPart;
@@ -273,22 +273,20 @@ STDMETHODIMP CFSFolder::GetProperty(UInt32 itemIndex, PROPID propID, PROPVARIANT
   CDirItem &fi = *_refs[itemIndex];
   switch(propID)
   {
-    case kpidIsDir: prop = fi.IsDir(); break;
-    case kpidName: prop = fi.Name; break;
-    case kpidSize: if (!fi.IsDir()) prop = fi.Size; break;
+    case kpidIsDir:  prop = fi.IsDir(); break;
+    case kpidName:  prop = fi.Name; break;
+    case kpidSize:  if (!fi.IsDir()) prop = fi.Size; break;
     case kpidPackSize:
-      #ifdef UNDER_CE
-      prop = fi.Size;
-      #else
       if (!fi.CompressedSizeIsDefined)
       {
         fi.CompressedSizeIsDefined = true;
+#ifdef _WIN32
         if (fi.IsDir () ||
             !MyGetCompressedFileSizeW(_path + GetRelPath(fi), fi.CompressedSize))
+#endif
           fi.CompressedSize = fi.Size;
       }
       prop = fi.CompressedSize;
-      #endif
       break;
     case kpidAttrib: prop = (UInt32)fi.Attrib; break;
     case kpidCTime: prop = fi.CTime; break;
@@ -365,40 +363,56 @@ STDMETHODIMP CFSFolder::BindToParentFolder(IFolderFolder **resultFolder)
   }
   if (_path.IsEmpty())
     return E_INVALIDARG;
+  printf("CFSFolder::BindToParentFolder path='%ls'\n",(const wchar_t *)_path);
   int pos = _path.ReverseFind(WCHAR_PATH_SEPARATOR);
   if (pos < 0 || pos != _path.Length() - 1)
     return E_FAIL;
   UString parentPath = _path.Left(pos);
+  printf("CFSFolder::BindToParentFolder parentPath='%ls'\n",(const wchar_t *)parentPath);
   pos = parentPath.ReverseFind(WCHAR_PATH_SEPARATOR);
   if (pos < 0)
   {
-    #ifdef UNDER_CE
-    *resultFolder = 0;
-    #else
+#ifdef _WIN32
+    parentPath.Empty();
     CFSDrives *drivesFolderSpec = new CFSDrives;
     CMyComPtr<IFolderFolder> drivesFolder = drivesFolderSpec;
     drivesFolderSpec->Init();
     *resultFolder = drivesFolder.Detach();
-    #endif
+#else
+    parentPath = WSTRING_PATH_SEPARATOR;
+    CFSFolder *parentFolderSpec = new CFSFolder;
+    CMyComPtr<IFolderFolder> parentFolder = parentFolderSpec;
+    printf("CFSFolder::BindToParentFolder Init-0 with parentPath='%ls'\n",(const wchar_t *)parentPath);
+    RINOK(parentFolderSpec->Init(parentPath, 0));
+    *resultFolder = parentFolder.Detach();
+#endif
     return S_OK;
   }
   UString parentPathReduced = parentPath.Left(pos);
   parentPath = parentPath.Left(pos + 1);
-  #ifndef UNDER_CE
   pos = parentPathReduced.ReverseFind(WCHAR_PATH_SEPARATOR);
   if (pos == 1)
   {
+#ifdef _WIN32
     if (parentPath[0] != WCHAR_PATH_SEPARATOR)
       return E_FAIL;
     CNetFolder *netFolderSpec = new CNetFolder;
     CMyComPtr<IFolderFolder> netFolder = netFolderSpec;
     netFolderSpec->Init(parentPath);
     *resultFolder = netFolder.Detach();
+#else
+    parentPath = WSTRING_PATH_SEPARATOR;
+    CFSFolder *parentFolderSpec = new CFSFolder;
+    CMyComPtr<IFolderFolder> parentFolder = parentFolderSpec;
+    printf("CFSFolder::BindToParentFolder Init-1 with parentPath='%ls'\n",(const wchar_t *)parentPath);
+    RINOK(parentFolderSpec->Init(parentPath, 0));
+    *resultFolder = parentFolder.Detach();
+#endif // ifdef _WIN32
     return S_OK;
   }
-  #endif
   CFSFolder *parentFolderSpec = new CFSFolder;
   CMyComPtr<IFolderFolder> parentFolder = parentFolderSpec;
+  printf("CFSFolder::BindToParentFolder Init-2 with parentPath='%ls'\n",(const wchar_t *)parentPath);
   RINOK(parentFolderSpec->Init(parentPath, 0));
   *resultFolder = parentFolder.Detach();
   return S_OK;
@@ -431,6 +445,7 @@ STDMETHODIMP CFSFolder::GetFolderProperty(PROPID propID, PROPVARIANT *value)
 STDMETHODIMP CFSFolder::WasChanged(Int32 *wasChanged)
 {
   bool wasChangedMain = false;
+#ifdef _WIN32
   for (;;)
   {
     if (!_findChangeNotification.IsHandleAllocated())
@@ -449,6 +464,7 @@ STDMETHODIMP CFSFolder::WasChanged(Int32 *wasChanged)
     else
       break;
   }
+#endif
   *wasChanged = BoolToInt(wasChangedMain);
   return S_OK;
 }
@@ -643,17 +659,21 @@ STDMETHODIMP CFSFolder::SetProperty(UInt32 index, PROPID propID,
 
 STDMETHODIMP CFSFolder::GetSystemIconIndex(UInt32 index, Int32 *iconIndex)
 {
+#ifdef _WIN32
   if (index >= (UInt32)_refs.Size())
     return E_INVALIDARG;
   const CDirItem &fi = *_refs[index];
   *iconIndex = 0;
   int iconIndexTemp;
-  if (GetRealIconIndex(_path + GetRelPath(fi), fi.Attrib, iconIndexTemp) != 0)
+  if (GetRealIconIndex(_path + GetRelPath(fi), fi.Attributes, iconIndexTemp) != 0)
   {
     *iconIndex = iconIndexTemp;
     return S_OK;
   }
   return GetLastError();
+#endif
+  *iconIndex = 0;
+    return S_OK;
 }
 
 STDMETHODIMP CFSFolder::SetFlatMode(Int32 flatMode)

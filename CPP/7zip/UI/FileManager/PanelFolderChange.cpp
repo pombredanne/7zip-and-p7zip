@@ -41,6 +41,8 @@ HRESULT CPanel::BindToPath(const UString &fullPath, const UString &arcFormat, bo
   encrypted = false;
   CDisableTimerProcessing disableTimerProcessing1(*this);
 
+  printf("CPanel::BindToPath(%ls)\n",(const wchar_t *)fullPath);
+
   if (_parentFolders.Size() > 0)
   {
     const UString &virtPath = _parentFolders.Back().VirtualPath;
@@ -196,9 +198,17 @@ void CPanel::LoadFullPathAndShow()
   LoadFullPath();
   _appState->FolderHistory.AddString(_currentFolderPrefix);
 
+#ifdef _WIN32
   _headerComboBox.SetText(_currentFolderPrefix);
-
-  #ifndef UNDER_CE
+#else
+  {
+    extern const TCHAR * nameWindowToUnix(const TCHAR * lpFileName);
+	UString tmp = nameWindowToUnix(_currentFolderPrefix);
+	_headerComboBox.SetText(tmp);
+  }	
+#endif
+	
+#ifdef _WIN32 // FIXME
   COMBOBOXEXITEM item;
   item.mask = 0;
 
@@ -226,7 +236,7 @@ void CPanel::LoadFullPathAndShow()
   }
   item.iItem = -1;
   _headerComboBox.SetItem(&item);
-  #endif
+#endif
 
   RefreshTitle();
 }
@@ -236,7 +246,7 @@ LRESULT CPanel::OnNotifyComboBoxEnter(const UString &s)
 {
   if (BindToPathAndRefresh(GetUnicodeString(s)) == S_OK)
   {
-    PostMessage(kSetFocusToListView);
+		// FIXME PostMessage(kSetFocusToListView);
     return TRUE;
   }
   return FALSE;
@@ -247,7 +257,7 @@ bool CPanel::OnNotifyComboBoxEndEdit(PNMCBEENDEDITW info, LRESULT &result)
   if (info->iWhy == CBENF_ESCAPE)
   {
     _headerComboBox.SetText(_currentFolderPrefix);
-    PostMessage(kSetFocusToListView);
+		// FIXME PostMessage(kSetFocusToListView);
     result = FALSE;
     return true;
   }
@@ -302,6 +312,7 @@ bool CPanel::OnNotifyComboBoxEndEdit(PNMCBEENDEDIT info, LRESULT &result)
 }
 #endif
 
+#ifdef _WIN32
 void CPanel::AddComboBoxItem(const UString &name, int iconIndex, int indent, bool addToList)
 {
   #ifdef UNDER_CE
@@ -333,9 +344,12 @@ void CPanel::AddComboBoxItem(const UString &name, int iconIndex, int indent, boo
 extern UString RootFolder_GetName_Computer(int &iconIndex);
 extern UString RootFolder_GetName_Network(int &iconIndex);
 extern UString RootFolder_GetName_Documents(int &iconIndex);
+#endif
+
 
 bool CPanel::OnComboBoxCommand(UINT code, LPARAM /* param */, LRESULT &result)
 {
+#ifdef _WIN32 // FIXME
   result = FALSE;
   switch(code)
   {
@@ -429,6 +443,7 @@ bool CPanel::OnComboBoxCommand(UINT code, LPARAM /* param */, LRESULT &result)
     }
     */
   }
+#endif
   return false;
 }
 
@@ -443,12 +458,14 @@ bool CPanel::OnNotifyComboBox(LPNMHDR header, LRESULT &result)
       _panelCallback->PanelWasFocused();
       break;
     }
+#ifdef _WIN32
     #ifndef _UNICODE
     case CBEN_ENDEDIT:
     {
       return OnNotifyComboBoxEndEdit((PNMCBEENDEDIT)header, result);
     }
     #endif
+#endif // #ifdef _WIN32
     case CBEN_ENDEDITW:
     {
       return OnNotifyComboBoxEndEdit((PNMCBEENDEDITW)header, result);
@@ -487,6 +504,7 @@ void CPanel::FoldersHistory()
 
 void CPanel::OpenParentFolder()
 {
+printf("CPanel::OpenParentFolder\n");
   LoadFullPath(); // Maybe we don't need it ??
   UString focucedName;
   if (!_currentFolderPrefix.IsEmpty() &&
@@ -501,6 +519,8 @@ void CPanel::OpenParentFolder()
         focucedName = focucedName.Mid(pos + 1);
     }
   }
+
+  printf("CPanel::OpenParentFolder focucedName=%ls\n",(const wchar_t *)focucedName);
 
   CDisableTimerProcessing disableTimerProcessing1(*this);
   CMyComPtr<IFolderFolder> newFolder;
@@ -541,6 +561,8 @@ void CPanel::OpenParentFolder()
   RefreshListCtrl(focucedName, -1, true, selectedItems);
   _listView.EnsureVisible(_listView.GetFocusedItem(), false);
   RefreshStatusBar();
+
+  printf("CPanel::OpenParentFolder-end\n");
 }
 
 void CPanel::CloseOpenFolders()

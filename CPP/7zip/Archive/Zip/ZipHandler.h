@@ -87,7 +87,7 @@ private:
     m_ForceAesMode = false;
     m_IsAesMode = false;
     m_AesKeyMode = 3; // aes-256
-    m_WriteNtfsTimeExtra = true;
+    m_WriteNtfsTimeExtra = false;
     m_ForceLocal = false;
     m_ForceUtf8 = false;
     #ifndef _7ZIP_ST

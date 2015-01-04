@@ -19,13 +19,7 @@ void RegisterCodec(const CCodecInfo *codecInfo)
 
 #ifdef _WIN32
 extern "C"
-BOOL WINAPI DllMain(
-  #ifdef UNDER_CE
-  HANDLE
-  #else
-  HINSTANCE
-  #endif
-  , DWORD /* dwReason */, LPVOID /*lpReserved*/)
+BOOL WINAPI DllMain(HINSTANCE /* hInstance */, DWORD /* dwReason */, LPVOID /*lpReserved*/)
 {
   return TRUE;
 }

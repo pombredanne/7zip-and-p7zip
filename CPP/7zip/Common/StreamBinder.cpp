@@ -53,9 +53,11 @@ STDMETHODIMP CSequentialOutStreamForBinder::Write(const void *data, UInt32 size,
 
 HRes CStreamBinder::CreateEvents()
 {
-  RINOK(_allBytesAreWritenEvent.Create(true));
+  _synchroFor_allBytesAreWritenEvent_and_readStreamIsClosedEvent = new NWindows::NSynchronization::CSynchro();
+  _synchroFor_allBytesAreWritenEvent_and_readStreamIsClosedEvent->Create();
+  RINOK(_allBytesAreWritenEvent.Create(_synchroFor_allBytesAreWritenEvent_and_readStreamIsClosedEvent,true));
   RINOK(_thereAreBytesToReadEvent.Create());
-  return _readStreamIsClosedEvent.Create();
+  return _readStreamIsClosedEvent.Create(_synchroFor_allBytesAreWritenEvent_and_readStreamIsClosedEvent);
 }
 
 void CStreamBinder::ReInit()

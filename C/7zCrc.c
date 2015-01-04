@@ -66,9 +66,11 @@ void MY_FAST_CALL CrcGenerateTable()
     g_CrcTable[i] = g_CrcTable[r & 0xFF] ^ (r >> 8);
   }
   g_CrcUpdate = CrcUpdateT4;
+/* FIXME
   #ifdef MY_CPU_X86_OR_AMD64
   if (!CPU_Is_InOrder())
     g_CrcUpdate = CrcUpdateT8;
   #endif
+*/
   #endif
 }

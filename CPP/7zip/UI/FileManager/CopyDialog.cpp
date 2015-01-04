@@ -23,6 +23,10 @@ static CIDLangPair kIDLangPairs[] =
 };
 #endif
 
+#ifndef _WIN32
+extern const TCHAR * nameWindowToUnix(const TCHAR * lpFileName);
+#endif
+
 bool CCopyDialog::OnInit()
 {
   #ifdef LANG
@@ -40,45 +44,14 @@ bool CCopyDialog::OnInit()
   #endif
   for (int i = 0; i < Strings.Size(); i++)
     _path.AddString(Strings[i]);
+#ifndef _WIN32
+  UString tmp = nameWindowToUnix(Value);
+  Value = tmp;
+#endif
   _path.SetText(Value);
   SetItemText(IDC_COPY_INFO, Info);
   NormalizeSize(true);
   return CModalDialog::OnInit();
-}
-
-bool CCopyDialog::OnSize(WPARAM /* wParam */, int xSize, int ySize)
-{
-  int mx, my;
-  GetMargins(8, mx, my);
-  int bx1, bx2, by;
-  GetItemSizes(IDCANCEL, bx1, by);
-  GetItemSizes(IDOK, bx2, by);
-  int y = ySize - my - by;
-  int x = xSize - mx - bx1;
-
-  InvalidateRect(NULL);
-
-  {
-    RECT rect;
-    GetClientRectOfItem(IDC_COPY_SET_PATH, rect);
-    int bx = rect.right - rect.left;
-    MoveItem(IDC_COPY_SET_PATH, xSize - mx - bx, rect.top, bx, rect.bottom - rect.top);
-    ChangeSubWindowSizeX(_path, xSize - mx - mx - bx - mx);
-  }
-
-  {
-    RECT rect;
-    GetClientRectOfItem(IDC_COPY_INFO, rect);
-    NControl::CStatic staticContol;
-    staticContol.Attach(GetItem(IDC_COPY_INFO));
-    int yPos = rect.top;
-    staticContol.Move(mx, yPos, xSize - mx * 2, y - 2 - yPos);
-  }
-
-  MoveItem(IDCANCEL, x, y, bx1, by);
-  MoveItem(IDOK, x - mx - bx2, y, bx2, by);
-
-  return false;
 }
 
 bool CCopyDialog::OnButtonClicked(int buttonID, HWND buttonHWND)

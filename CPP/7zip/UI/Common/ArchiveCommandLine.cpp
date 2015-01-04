@@ -18,6 +18,8 @@
 #ifdef _WIN32
 #include "Windows/FileMapping.h"
 #include "Windows/Synchronization.h"
+#else
+#include "myPrivate.h"
 #endif
 
 #include "ArchiveCommandLine.h"
@@ -47,8 +49,6 @@ extern bool g_CaseSensitive;
 using namespace NCommandLineParser;
 using namespace NWindows;
 using namespace NFile;
-
-int g_CodePage = -1;
 
 namespace NKey {
 enum Enum
@@ -81,10 +81,8 @@ enum Enum
   kEmail,
   kShowDialog,
   kLargePages,
-  kListfileCharSet,
-  kConsoleCharSet,
+  kUseLStat,
   kTechMode,
-  kShareForWrite,
   kCaseSensitive,
   kCalcCrc
 };
@@ -150,10 +148,8 @@ static const CSwitchForm kSwitchForms[] =
     { L"SEML", NSwitchType::kUnLimitedPostString, false, 0},
     { L"AD",  NSwitchType::kSimple, false },
     { L"SLP", NSwitchType::kUnLimitedPostString, false, 0},
-    { L"SCS", NSwitchType::kUnLimitedPostString, false, 0},
-    { L"SCC", NSwitchType::kUnLimitedPostString, false, 0},
+    { L"L",  NSwitchType::kSimple, false },
     { L"SLT", NSwitchType::kSimple, false },
-    { L"SSW", NSwitchType::kSimple, false },
     { L"SSC", NSwitchType::kPostChar, false, 0, 0, L"-" },
     { L"SCRC", NSwitchType::kSimple, false }
   };
@@ -711,7 +707,7 @@ void CArchiveCommandLineParser::Parse1(const UStringVector &commandStrings,
   options.EnableHeaders = !parser[NKey::kDisableHeaders].ThereIs;
   options.HelpMode = parser[NKey::kHelp1].ThereIs || parser[NKey::kHelp2].ThereIs  || parser[NKey::kHelp3].ThereIs;
 
-  #ifdef _WIN32
+  #ifdef _7ZIP_LARGE_PAGES
   options.LargePages = false;
   if (parser[NKey::kLargePages].ThereIs)
   {
@@ -720,38 +716,6 @@ void CArchiveCommandLineParser::Parse1(const UStringVector &commandStrings,
       options.LargePages = true;
   }
   #endif
-}
-
-struct CCodePagePair
-{
-  const wchar_t *Name;
-  UINT CodePage;
-};
-
-static CCodePagePair g_CodePagePairs[] =
-{
-  { L"UTF-8", CP_UTF8 },
-  { L"WIN", CP_ACP },
-  { L"DOS", CP_OEMCP }
-};
-
-static int FindCharset(const NCommandLineParser::CParser &parser, int keyIndex, int defaultVal)
-{
-  if (!parser[keyIndex].ThereIs)
-    return defaultVal;
-
-  UString name = parser[keyIndex].PostStrings.Back();
-  name.MakeUpper();
-  int i;
-  for (i = 0; i < sizeof(g_CodePagePairs) / sizeof(g_CodePagePairs[0]); i++)
-  {
-    const CCodePagePair &pair = g_CodePagePairs[i];
-    if (name.Compare(pair.Name) == 0)
-      return pair.CodePage;
-  }
-  if (i == sizeof(g_CodePagePairs) / sizeof(g_CodePagePairs[0]))
-    ThrowUserErrorException();
-  return -1;
 }
 
 static bool ConvertStringToUInt32(const wchar_t *s, UInt32 &v)
@@ -764,52 +728,6 @@ static bool ConvertStringToUInt32(const wchar_t *s, UInt32 &v)
     return false;
   v = (UInt32)number;
   return true;
-}
-
-void EnumerateDirItemsAndSort(NWildcard::CCensor &wildcardCensor,
-    UStringVector &sortedPaths,
-    UStringVector &sortedFullPaths)
-{
-  UStringVector paths;
-  {
-    CDirItems dirItems;
-    {
-      UStringVector errorPaths;
-      CRecordVector<DWORD> errorCodes;
-      HRESULT res = EnumerateItems(wildcardCensor, dirItems, NULL, errorPaths, errorCodes);
-      if (res != S_OK || errorPaths.Size() > 0)
-        throw "cannot find archive";
-    }
-    for (int i = 0; i < dirItems.Items.Size(); i++)
-    {
-      const CDirItem &dirItem = dirItems.Items[i];
-      if (!dirItem.IsDir())
-        paths.Add(dirItems.GetPhyPath(i));
-    }
-  }
-  
-  if (paths.Size() == 0)
-    throw "there is no such archive";
-  
-  UStringVector fullPaths;
-  
-  int i;
-  for (i = 0; i < paths.Size(); i++)
-  {
-    UString fullPath;
-    NFile::NDirectory::MyGetFullPathName(paths[i], fullPath);
-    fullPaths.Add(fullPath);
-  }
-  CIntVector indices;
-  SortFileNames(fullPaths, indices);
-  sortedPaths.Reserve(indices.Size());
-  sortedFullPaths.Reserve(indices.Size());
-  for (i = 0; i < indices.Size(); i++)
-  {
-    int index = indices[i];
-    sortedPaths.Add(paths[index]);
-    sortedFullPaths.Add(fullPaths[index]);
-  }
 }
 
 void CArchiveCommandLineParser::Parse2(CArchiveCommandLineOptions &options)
@@ -834,8 +752,7 @@ void CArchiveCommandLineParser::Parse2(CArchiveCommandLineOptions &options)
   else
     recursedType = NRecursedType::kNonRecursed;
 
-  g_CodePage = FindCharset(parser, NKey::kConsoleCharSet, -1);
-  UINT codePage = FindCharset(parser, NKey::kListfileCharSet, CP_UTF8);
+   UINT codePage = CP_ACP;
 
   bool thereAreSwitchIncludes = false;
   if (parser[NKey::kInclude].ThereIs)
@@ -874,6 +791,9 @@ void CArchiveCommandLineParser::Parse2(CArchiveCommandLineOptions &options)
 
   options.YesToAll = parser[NKey::kYes].ThereIs;
 
+#ifdef ENV_HAVE_LSTAT
+  global_use_lstat = !parser[NKey::kUseLStat].ThereIs;
+#endif
 
   #ifndef _NO_CRYPTO
   options.PasswordEnabled = parser[NKey::kPassword].ThereIs;
@@ -900,8 +820,15 @@ void CArchiveCommandLineParser::Parse2(CArchiveCommandLineOptions &options)
       AddSwitchWildCardsToCensor(archiveWildcardCensor,
           parser[NKey::kArExclude].PostStrings, false, NRecursedType::kNonRecursed, codePage);
 
-    if (thereIsArchiveName)
-      AddNameToCensor(archiveWildcardCensor, options.ArchiveName, true, NRecursedType::kNonRecursed);
+    bool directlyAddArchiveName = false;
+    if (thereIsArchiveName) {
+      if ((options.ArchiveName.Find(kUniversalWildcard) == -1) && (options.ArchiveName.Find(L"?") == -1)) {
+        // no wildcard => no need to scan
+        directlyAddArchiveName = true;
+      } else {
+        AddNameToCensor(archiveWildcardCensor, options.ArchiveName, true, NRecursedType::kNonRecursed);
+      }
+    }
 
     #ifdef _WIN32
     ConvertToLongNames(archiveWildcardCensor);
@@ -917,9 +844,53 @@ void CArchiveCommandLineParser::Parse2(CArchiveCommandLineOptions &options)
     }
     else
     {
-      EnumerateDirItemsAndSort(archiveWildcardCensor,
-        options.ArchivePathsSorted,
-        options.ArchivePathsFullSorted);
+
+    UStringVector archivePaths;
+
+    {
+      CDirItems dirItems;
+      {
+        UStringVector errorPaths;
+        CRecordVector<DWORD> errorCodes;
+        HRESULT res = EnumerateItems(archiveWildcardCensor, dirItems, NULL, errorPaths, errorCodes);
+        if (res != S_OK || errorPaths.Size() > 0)
+          throw "cannot find archive";
+      }
+      for (int i = 0; i < dirItems.Items.Size(); i++)
+      {
+        const CDirItem &dirItem = dirItems.Items[i];
+        if (!dirItem.IsDir())
+          archivePaths.Add(dirItems.GetPhyPath(i));
+      }
+    }
+
+    // Because the pathname of archive can be a symbolic link
+    // do not use "AddCommandLineWildCardToCensr(archiveWildcardCensor, options.ArchiveName"
+    if (directlyAddArchiveName)
+      archivePaths.Add(options.ArchiveName);
+
+    if (archivePaths.Size() == 0)
+      throw "there is no such archive";
+
+    UStringVector archivePathsFull;
+
+    int i;
+    for (i = 0; i < archivePaths.Size(); i++)
+    {
+      UString fullPath;
+      NFile::NDirectory::MyGetFullPathName(archivePaths[i], fullPath);
+      archivePathsFull.Add(fullPath);
+    }
+    CIntVector indices;
+    SortFileNames(archivePathsFull, indices);
+    options.ArchivePathsSorted.Reserve(indices.Size());
+    options.ArchivePathsFullSorted.Reserve(indices.Size());
+    for (i = 0; i < indices.Size(); i++)
+    {
+      options.ArchivePathsSorted.Add(archivePaths[indices[i]]);
+      options.ArchivePathsFullSorted.Add(archivePathsFull[indices[i]]);
+    }
+    
     }
     
     if (isExtractGroupCommand)
@@ -947,9 +918,6 @@ void CArchiveCommandLineParser::Parse2(CArchiveCommandLineOptions &options)
     SetAddCommandOptions(options.Command.CommandType, parser, updateOptions);
     
     SetMethodOptions(parser, updateOptions.MethodMode.Properties);
-
-    if (parser[NKey::kShareForWrite].ThereIs)
-      updateOptions.OpenShareForWrite = true;
 
     options.EnablePercents = !parser[NKey::kDisablePercents].ThereIs;
 

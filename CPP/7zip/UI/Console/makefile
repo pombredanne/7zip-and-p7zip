@@ -1,124 +1,109 @@
-PROG = 7z.exe
-MY_CONSOLE = 1
-CFLAGS = $(CFLAGS) -I ../../../  \
+PROG=../../../../bin/7z$(BINSUFFIX)
+
+LOCAL_FLAGS=\
+  -DEXTERNAL_LZMA \
   -DEXTERNAL_CODECS \
+  -DBREAK_HANDLER \
+  -DUNICODE -D_UNICODE
 
-!IFNDEF UNDER_CE
-CFLAGS = $(CFLAGS) -DWIN_LONG_PATH -D_7ZIP_LARGE_PAGES -DSUPPORT_DEVICE_FILE
-!ENDIF
+include ../../../../makefile.crc32
+include ../../../../makefile.machine
 
+PCH_NAME=$(PRE_COMPILED_HEADER)
+
+LIBS=$(LOCAL_LIBS_DLL)
 
 CONSOLE_OBJS = \
-  $O\ConsoleClose.obj \
-  $O\ExtractCallbackConsole.obj \
-  $O\List.obj \
-  $O\BenchCon.obj \
-  $O\Main.obj \
-  $O\MainAr.obj \
-  $O\OpenCallbackConsole.obj \
-  $O\PercentPrinter.obj \
-  $O\UpdateCallbackConsole.obj \
-  $O\UserInputUtils.obj \
+  ConsoleClose.o \
+  ExtractCallbackConsole.o \
+  BenchCon.o \
+  List.o \
+  Main.o \
+  MainAr.o \
+  OpenCallbackConsole.o \
+  PercentPrinter.o \
+  UpdateCallbackConsole.o \
+  UserInputUtils.o \
 
+# NewHandler.o
 COMMON_OBJS = \
-  $O\CommandLineParser.obj \
-  $O\CRC.obj \
-  $O\IntToString.obj \
-  $O\ListFileUtils.obj \
-  $O\NewHandler.obj \
-  $O\StdInStream.obj \
-  $O\StdOutStream.obj \
-  $O\MyString.obj \
-  $O\StringConvert.obj \
-  $O\StringToInt.obj \
-  $O\UTFConvert.obj \
-  $O\MyVector.obj \
-  $O\Wildcard.obj \
+  CommandLineParser.o \
+  CRC.o \
+  IntToString.o \
+  ListFileUtils.o \
+  StdInStream.o \
+  StdOutStream.o \
+  MyString.o \
+  MyWindows.o \
+  StringConvert.o \
+  StringToInt.o \
+  UTFConvert.o \
+  MyVector.o \
+  Wildcard.o \
 
+# MemoryLock.o Registry.o
 WIN_OBJS = \
-  $O\DLL.obj \
-  $O\Error.obj \
-  $O\FileDir.obj \
-  $O\FileFind.obj \
-  $O\FileIO.obj \
-  $O\FileName.obj \
-  $O\MemoryLock.obj \
-  $O\PropVariant.obj \
-  $O\PropVariantConversions.obj \
-  $O\Registry.obj \
-  $O\System.obj \
-  $O\Time.obj \
+  DLL.o \
+  Error.o \
+  FileDir.o \
+  FileFind.o \
+  FileIO.o \
+  FileName.o \
+  PropVariant.o \
+  PropVariantConversions.o \
+  System.o \
+  Time.o \
 
 7ZIP_COMMON_OBJS = \
-  $O\CreateCoder.obj \
-  $O\FilePathAutoRename.obj \
-  $O\FileStreams.obj \
-  $O\FilterCoder.obj \
-  $O\ProgressUtils.obj \
-  $O\StreamUtils.obj \
+  CreateCoder.o \
+  FilePathAutoRename.o \
+  FileStreams.o \
+  FilterCoder.o \
+  ProgressUtils.o \
+  StreamUtils.o \
 
+# WorkDir.o
 UI_COMMON_OBJS = \
-  $O\ArchiveCommandLine.obj \
-  $O\ArchiveExtractCallback.obj \
-  $O\ArchiveOpenCallback.obj \
-  $O\DefaultName.obj \
-  $O\EnumDirItems.obj \
-  $O\Extract.obj \
-  $O\ExtractingFilePath.obj \
-  $O\Bench.obj \
-  $O\LoadCodecs.obj \
-  $O\OpenArchive.obj \
-  $O\PropIDUtils.obj \
-  $O\SetProperties.obj \
-  $O\SortUtils.obj \
-  $O\TempFiles.obj \
-  $O\Update.obj \
-  $O\UpdateAction.obj \
-  $O\UpdateCallback.obj \
-  $O\UpdatePair.obj \
-  $O\UpdateProduce.obj \
-  $O\WorkDir.obj \
+  ArchiveCommandLine.o \
+  ArchiveExtractCallback.o \
+  ArchiveOpenCallback.o \
+  DefaultName.o \
+  EnumDirItems.o \
+  Extract.o \
+  Bench.o \
+  ExtractingFilePath.o \
+  LoadCodecs.o \
+  OpenArchive.o \
+  PropIDUtils.o \
+  SetProperties.o \
+  SortUtils.o \
+  TempFiles.o \
+  Update.o \
+  UpdateAction.o \
+  UpdateCallback.o \
+  UpdatePair.o \
+  UpdateProduce.o \
 
 AR_COMMON_OBJS = \
-  $O\OutStreamWithCRC.obj \
+  OutStreamWithCRC.o \
 
 C_OBJS = \
-  $O\Alloc.obj \
-  $O\CpuArch.obj \
-  $O\Threads.obj \
-
-!include "../../Crc.mak"
+  Alloc.o \
+  Threads.o \
 
 OBJS = \
-  $O\StdAfx.obj \
+  mySplitCommandLine.o \
+  myAddExeFlag.o \
+  wine_date_and_time.o \
   $(CONSOLE_OBJS) \
   $(COMMON_OBJS) \
   $(WIN_OBJS) \
   $(7ZIP_COMMON_OBJS) \
   $(UI_COMMON_OBJS) \
   $(AR_COMMON_OBJS) \
-  $O\CopyCoder.obj \
+  CopyCoder.o \
   $(C_OBJS) \
-  $(ASM_OBJS) \
-  $O\resource.res
+  $(OBJ_CRC32)
 
-!include "../../../Build.mak"
+include ../../../../makefile.glb
 
-$(CONSOLE_OBJS): $(*B).cpp
-	$(COMPL)
-$(COMMON_OBJS): ../../../Common/$(*B).cpp
-	$(COMPL)
-$(WIN_OBJS): ../../../Windows/$(*B).cpp
-	$(COMPL)
-$(7ZIP_COMMON_OBJS): ../../Common/$(*B).cpp
-	$(COMPL)
-$(UI_COMMON_OBJS): ../Common/$(*B).cpp
-	$(COMPL)
-$(AR_COMMON_OBJS): ../../Archive/Common/$(*B).cpp
-	$(COMPL)
-$O\CopyCoder.obj: ../../Compress/$(*B).cpp
-	$(COMPL)
-$(C_OBJS): ../../../../C/$(*B).c
-	$(COMPL_O2)
-
-!include "../../Asm.mak"

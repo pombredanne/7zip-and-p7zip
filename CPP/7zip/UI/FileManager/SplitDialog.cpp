@@ -49,6 +49,7 @@ bool CSplitDialog::OnInit()
   return CModalDialog::OnInit();
 }
 
+#ifdef _WIN32
 bool CSplitDialog::OnSize(WPARAM /* wParam */, int xSize, int ySize)
 {
   int mx, my;
@@ -74,6 +75,7 @@ bool CSplitDialog::OnSize(WPARAM /* wParam */, int xSize, int ySize)
 
   return false;
 }
+#endif
 
 bool CSplitDialog::OnButtonClicked(int buttonID, HWND buttonHWND)
 {

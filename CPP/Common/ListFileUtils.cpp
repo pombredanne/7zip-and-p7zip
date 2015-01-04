@@ -20,7 +20,7 @@ static void RemoveQuote(UString &s)
 bool ReadNamesFromListFile(LPCWSTR fileName, UStringVector &resultStrings, UINT codePage)
 {
   NWindows::NFile::NIO::CInFile file;
-  if (!file.Open(fileName))
+  if (!file.Open(fileName,true)) /* follow the symbolic link */
     return false;
   UInt64 length;
   if (!file.GetLength(length))

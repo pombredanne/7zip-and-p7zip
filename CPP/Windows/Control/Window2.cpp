@@ -20,21 +20,16 @@ ATOM MyRegisterClass(CONST WNDCLASSW *wndClass);
 
 namespace NControl {
 
-#ifdef UNDER_CE
-#define MY_START_WM_CREATE WM_CREATE
-#else
-#define MY_START_WM_CREATE WM_NCCREATE
-#endif
-
+#ifdef _WIN32
 static LRESULT CALLBACK WindowProcedure(HWND aHWND, UINT message,
     WPARAM wParam, LPARAM lParam)
 {
   CWindow tempWindow(aHWND);
-  if (message == MY_START_WM_CREATE)
+  if (message == WM_NCCREATE)
     tempWindow.SetUserDataLongPtr(
         LONG_PTR(((LPCREATESTRUCT)lParam)->lpCreateParams));
   CWindow2 *window = (CWindow2*)(tempWindow.GetUserDataLongPtr());
-  if (window != NULL && message == MY_START_WM_CREATE)
+  if (window != NULL && message == WM_NCCREATE)
     window->Attach(aHWND);
   if (window == 0)
   {
@@ -55,7 +50,7 @@ bool CWindow2::CreateEx(DWORD exStyle, LPCTSTR className,
       HINSTANCE instance)
 {
   WNDCLASS windowClass;
-  if (!::GetClassInfo(instance, className, &windowClass))
+  if(!::GetClassInfo(instance, className, &windowClass))
   {
     // windowClass.style          = CS_HREDRAW | CS_VREDRAW;
     windowClass.style          = 0;
@@ -86,7 +81,7 @@ bool CWindow2::CreateEx(DWORD exStyle, LPCWSTR className,
       HINSTANCE instance)
 {
   bool needRegister;
-  if (g_IsNT)
+  if(g_IsNT)
   {
     WNDCLASSW windowClass;
     needRegister = ::GetClassInfoW(instance, className, &windowClass) == 0;
@@ -138,6 +133,7 @@ LRESULT CWindow2::DefProc(UINT message, WPARAM wParam, LPARAM lParam)
   #endif
     return DefWindowProc(_window, message, wParam, lParam);
 }
+#endif
 
 LRESULT CWindow2::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -162,11 +158,17 @@ LRESULT CWindow2::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
     case WM_CLOSE:
       OnClose();
       return 0;
+#ifdef _WIN32
     case WM_SIZE:
       if (OnSize(wParam, LOWORD(lParam), HIWORD(lParam)))
         return 0;
+#endif
   }
+#ifdef _WIN32
   return DefProc(message, wParam, lParam);
+#else
+  return 0;
+#endif
 }
 
 bool CWindow2::OnCommand(WPARAM wParam, LPARAM lParam, LRESULT &result)

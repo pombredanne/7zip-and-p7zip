@@ -207,8 +207,11 @@ bool CExtractDialog::OnInit()
 
   #endif
 
+
+#ifdef _WIN32
   HICON icon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ICON));
   SetIcon(ICON_BIG, icon);
+#endif
  
   // CWindow filesWindow = GetItem(IDC_EXTRACT_RADIO_FILES);
   // filesWindow.Enable(_enableFilesButton);

@@ -23,6 +23,8 @@ static const UINT kIconTypesResId = 100;
 
 #ifdef _WIN32
 #include "Windows/Registry.h"
+#else
+#include "Common/StringConvert.h"
 #endif
 
 using namespace NWindows;
@@ -41,7 +43,13 @@ static CSysString GetLibraryFolderPrefix()
   int pos = path.ReverseFind(TEXT(CHAR_PATH_SEPARATOR));
   return path.Left(pos + 1);
   #else
-  return CSysString(); // FIX IT
+  const char *p7zip_home_dir = getenv("P7ZIP_HOME_DIR");
+  if (p7zip_home_dir == 0) p7zip_home_dir="./";
+#ifdef _UNICODE
+  return MultiByteToUnicodeString(p7zip_home_dir);
+#else
+  return p7zip_home_dir;
+#endif
   #endif
 }
 
@@ -69,6 +77,20 @@ static bool ReadPathFromRegistry(HKEY baseKey, CSysString &path)
 CSysString GetBaseFolderPrefixFromRegistry()
 {
   CSysString moduleFolderPrefix = GetLibraryFolderPrefix();
+#ifdef _UNICODE
+  NFind::CFileInfoW fi;
+#else
+  NFind::CFileInfo fi;
+#endif
+  if (NFind::FindFile(moduleFolderPrefix + kMainDll, fi))
+    if (!fi.IsDir())
+      return moduleFolderPrefix;
+  if (NFind::FindFile(moduleFolderPrefix + kCodecsFolderName, fi))
+    if (fi.IsDir())
+      return moduleFolderPrefix;
+  if (NFind::FindFile(moduleFolderPrefix + kFormatsFolderName, fi))
+    if (fi.IsDir())
+      return moduleFolderPrefix;
   #ifdef _WIN32
   if (!NFind::DoesFileExist(moduleFolderPrefix + kMainDll) &&
       !NFind::DoesDirExist(moduleFolderPrefix + kCodecsFolderName) &&
@@ -284,7 +306,7 @@ HRESULT CCodecs::LoadFormats()
       {
         UINT len = ::SysStringByteLen(prop.bstrVal);
         item.StartSignature.SetCapacity(len);
-        memmove(item.StartSignature, prop.bstrVal, len);
+        memmove((Byte *)item.StartSignature, prop.bstrVal, len);
       }
     Formats.Add(item);
   }
@@ -294,6 +316,7 @@ HRESULT CCodecs::LoadFormats()
 #ifdef NEW_FOLDER_INTERFACE
 void CCodecIcons::LoadIcons(HMODULE m)
 {
+#ifdef _WIN32
   UString iconTypes = MyLoadStringW(m, kIconTypesResId);
   UStringVector pairs;
   SplitString(iconTypes, pairs);
@@ -319,10 +342,12 @@ void CCodecIcons::LoadIcons(HMODULE m)
     iconPair.Ext = s.Left(pos);
     IconPairs.Add(iconPair);
   }
+#endif // #ifdef _WIN32
 }
 
 bool CCodecIcons::FindIconIndex(const UString &ext, int &iconIndex) const
 {
+#ifdef _WIN32
   iconIndex = -1;
   for (int i = 0; i < IconPairs.Size(); i++)
   {
@@ -333,6 +358,7 @@ bool CCodecIcons::FindIconIndex(const UString &ext, int &iconIndex) const
       return true;
     }
   }
+#endif // #ifdef _WIN32
   return false;
 }
 #endif
@@ -340,18 +366,20 @@ bool CCodecIcons::FindIconIndex(const UString &ext, int &iconIndex) const
 #ifdef _7ZIP_LARGE_PAGES
 extern "C"
 {
-  extern SIZE_T g_LargePageSize;
+  extern size_t g_LargePageSize;
 }
 #endif
 
 HRESULT CCodecs::LoadDll(const CSysString &dllPath, bool needCheckDll)
 {
+#ifdef _WIN32
   if (needCheckDll)
   {
     NDLL::CLibrary library;
     if (!library.LoadEx(dllPath, LOAD_LIBRARY_AS_DATAFILE))
       return S_OK;
   }
+#endif
   Libs.Add(CCodecLib());
   CCodecLib &lib = Libs.Back();
   #ifdef NEW_FOLDER_INTERFACE
@@ -395,8 +423,13 @@ HRESULT CCodecs::LoadDll(const CSysString &dllPath, bool needCheckDll)
 
 HRESULT CCodecs::LoadDllsFromFolder(const CSysString &folderPrefix)
 {
+#ifdef _UNICODE
+  NFile::NFind::CEnumeratorW enumerator(folderPrefix + CSysString(TEXT("*")));
+  NFile::NFind::CFileInfoW fi;
+#else
   NFile::NFind::CEnumerator enumerator(folderPrefix + CSysString(TEXT("*")));
   NFile::NFind::CFileInfo fi;
+#endif
   while (enumerator.Next(fi))
   {
     if (fi.IsDir())
@@ -419,7 +452,9 @@ static inline void SetBuffer(CByteBuffer &bb, const Byte *data, int size)
 HRESULT CCodecs::Load()
 {
   #ifdef NEW_FOLDER_INTERFACE
+  #ifdef _WIN32
   InternalIcons.LoadIcons(g_hInstance);
+  #endif
   #endif
 
   Formats.Clear();

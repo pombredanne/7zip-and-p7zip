@@ -219,7 +219,7 @@ private:
   UInt64 _previousPos;
   UInt64 _range;
   NWindows::NControl::CProgressBar m_ProgressBar;
-  NWindows::NControl::CListView _messageList;
+  // FIXME NWindows::NControl::CListView _messageList;
 
   UInt32 _prevPercentValue;
   UInt32 _prevTime;
@@ -284,7 +284,7 @@ private:
 public:
   CProgressSync Sync;
   bool CompressingMode;
-  bool WaitMode;
+  // FIXME - not supported bool WaitMode;
   bool ShowCompressionInfo;
   bool MessagesDisplayed; // = true if user pressed OK on all messages or there are no messages.
   int IconID;

@@ -143,6 +143,13 @@ HRESULT ExtractGUI(
         return E_FAIL;
       }
       NFile::NName::NormalizeDirPathPrefix(dialog.DirectoryPath);
+#ifndef _WIN32
+      {
+	extern const TCHAR * nameWindowToUnix(const TCHAR * lpFileName);
+        UString tmpDirectoryPath = dialog.DirectoryPath;
+	dialog.DirectoryPath = nameWindowToUnix(tmpDirectoryPath);
+      }
+#endif
 
       // dialog.OverwriteMode = options.OverwriteMode;
       // dialog.PathMode = options.PathMode;

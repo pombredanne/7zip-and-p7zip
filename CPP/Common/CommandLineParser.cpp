@@ -6,6 +6,7 @@
 
 namespace NCommandLineParser {
 
+#ifdef _WIN32
 bool SplitCommandLine(const UString &src, UString &dest1, UString &dest2)
 {
   dest1.Empty();
@@ -43,7 +44,7 @@ void SplitCommandLine(const UString &s, UStringVector &parts)
     sTemp = s2;
   }
 }
-
+#endif
 
 static const wchar_t kSwitchID1 = '-';
 // static const wchar_t kSwitchID2 = '/';

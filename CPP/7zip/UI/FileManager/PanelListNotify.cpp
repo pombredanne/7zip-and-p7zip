@@ -18,7 +18,6 @@
 
 using namespace NWindows;
 
-/*
 static UString ConvertSizeToStringShort(UInt64 value)
 {
   wchar_t s[32];
@@ -51,7 +50,6 @@ static UString ConvertSizeToStringShort(UInt64 value)
   s[p++] = L'\0';
   return s;
 }
-*/
 
 UString ConvertSizeToString(UInt64 value)
 {
@@ -78,6 +76,8 @@ LRESULT CPanel::SetItemText(LVITEMW &item)
     return 0;
 
   UINT32 realIndex = GetRealIndex(item);
+  // printf(" CPanel::SetItemText : realIndex=%d\n",realIndex);
+
   /*
   if ((item.mask & LVIF_IMAGE) != 0)
   {
@@ -118,7 +118,7 @@ LRESULT CPanel::SetItemText(LVITEMW &item)
   /*
   {
     NCOM::CPropVariant property;
-    if (propID == kpidType)
+    if(propID == kpidType)
       string = GetFileType(index);
     else
     {
@@ -149,22 +149,16 @@ LRESULT CPanel::SetItemText(LVITEMW &item)
   if (needRead)
   */
 
-  HRESULT res = _folder->GetProperty(realIndex, propID, &prop);
-  if (res != S_OK)
-    s = UString(L"Error: ") + HResultToMessage(res);
-  else
-  if ((prop.vt == VT_UI8 || prop.vt == VT_UI4) && (
-      propID == kpidSize ||
-      propID == kpidPackSize ||
-      propID == kpidNumSubDirs ||
-      propID == kpidNumSubFiles ||
-      propID == kpidPosition ||
-      propID == kpidNumBlocks ||
-      propID == kpidClusterSize ||
-      propID == kpidTotalSize ||
-      propID == kpidFreeSpace
-      ))
+  if (_folder->GetProperty(realIndex, propID, &prop) != S_OK)
+      throw 2723407;
+
+  if ((propID == kpidSize || propID == kpidPackSize || propID == kpidClusterSize ||
+      propID == kpidNumSubDirs || propID == kpidNumSubFiles) &&
+      (prop.vt == VT_UI8 || prop.vt == VT_UI4))
     s = ConvertSizeToString(ConvertPropVariantToUInt64(prop));
+  else if ((propID == kpidTotalSize || propID == kpidFreeSpace) &&
+      (prop.vt == VT_UI8 || prop.vt == VT_UI4))
+    s = ConvertSizeToStringShort(ConvertPropVariantToUInt64(prop));
   else
   {
     s = ConvertPropertyToString(prop, propID, false);
@@ -172,16 +166,16 @@ LRESULT CPanel::SetItemText(LVITEMW &item)
     s.Replace(wchar_t(0xD), L' ');
   }
   int size = item.cchTextMax;
-  if (size > 0)
+  if(size > 0)
   {
-    if (s.Length() + 1 > size)
+    if(s.Length() + 1 > size)
       s = s.Left(size - 1);
     MyStringCopy(item.pszText, (const wchar_t *)s);
   }
   return 0;
 }
 
-#ifndef UNDER_CE
+#ifdef _WIN32
 extern DWORD g_ComCtl32Version;
 #endif
 
@@ -193,27 +187,19 @@ void CPanel::OnItemChanged(NMLISTVIEW *item)
   bool oldSelected = (item->uOldState & LVIS_SELECTED) != 0;
   bool newSelected = (item->uNewState & LVIS_SELECTED) != 0;
   // Don't change this code. It works only with such check
-  if (oldSelected != newSelected)
+  printf("CPanel::OnItemChanged : index=%d oldSel=%d newSel=%d\n",index,(int)oldSelected,(int)newSelected);
+  if(oldSelected != newSelected) {
+    printf("CPanel::OnItemChanged :  _selectedStatusVector[%d] = %d\n",index,(int)newSelected);
     _selectedStatusVector[index] = newSelected;
-}
-
-extern bool g_LVN_ITEMACTIVATE_Support;
-
-void CPanel::OnNotifyActivateItems()
-{
-  // bool leftCtrl = (::GetKeyState(VK_LCONTROL) & 0x8000) != 0;
-  // bool rightCtrl = (::GetKeyState(VK_RCONTROL) & 0x8000) != 0;
-  bool alt = (::GetKeyState(VK_MENU) & 0x8000) != 0;
-  bool ctrl = (::GetKeyState(VK_CONTROL) & 0x8000) != 0;
-  bool shift = (::GetKeyState(VK_SHIFT) & 0x8000) != 0;
-  if (!shift && alt && !ctrl)
-    Properties();
-  else
-    OpenSelectedItems(!shift || alt || ctrl);
+  }
 }
 
 bool CPanel::OnNotifyList(LPNMHDR header, LRESULT &result)
 {
+	printf("CPanel::OnNotifyList : FIXME\n");
+  // bool alt = (::GetKeyState(VK_MENU) & 0x8000) != 0;
+  // bool ctrl = (::GetKeyState(VK_CONTROL) & 0x8000) != 0;
+  // bool shift = (::GetKeyState(VK_SHIFT) & 0x8000) != 0;
   switch(header->code)
   {
     case LVN_ITEMCHANGED:
@@ -234,13 +220,14 @@ bool CPanel::OnNotifyList(LPNMHDR header, LRESULT &result)
       }
     */
 
+#ifdef _WIN32
     case LVN_GETDISPINFOW:
     {
       LV_DISPINFOW *dispInfo = (LV_DISPINFOW *)header;
 
       //is the sub-item information being requested?
 
-      if ((dispInfo->item.mask & LVIF_TEXT) != 0 ||
+      if((dispInfo->item.mask & LVIF_TEXT) != 0 ||
         (dispInfo->item.mask & LVIF_IMAGE) != 0)
         SetItemText(dispInfo->item);
       return false;
@@ -251,27 +238,39 @@ bool CPanel::OnNotifyList(LPNMHDR header, LRESULT &result)
       RefreshStatusBar();
       return boolResult;
     }
+#endif
 
     case LVN_COLUMNCLICK:
       OnColumnClick(LPNMLISTVIEW(header));
       return false;
-
+    /*
     case LVN_ITEMACTIVATE:
-      if (g_LVN_ITEMACTIVATE_Support)
-      {
-        OnNotifyActivateItems();
-        return false;
-      }
-      break;
-    case NM_DBLCLK:
-    case NM_RETURN:
-      if (!g_LVN_ITEMACTIVATE_Support)
-      {
-        OnNotifyActivateItems();
-        return false;
-      }
-      break;
+      RefreshStatusBar();
+      if (!alt && !ctrl && !shift)
+        OpenSelectedItems(true);
+      return false;
+    */
 
+    case NM_DBLCLK:
+      RefreshStatusBar();
+      OpenSelectedItems(true);
+      return false;
+#ifdef _WIN32
+    case NM_RETURN:
+    {
+      bool alt = (::GetKeyState(VK_MENU) & 0x8000) != 0;
+      bool ctrl = (::GetKeyState(VK_CONTROL) & 0x8000) != 0;
+      // bool leftCtrl = (::GetKeyState(VK_LCONTROL) & 0x8000) != 0;
+      // bool RightCtrl = (::GetKeyState(VK_RCONTROL) & 0x8000) != 0;
+      bool shift = (::GetKeyState(VK_SHIFT) & 0x8000) != 0;
+      if (!shift && alt && !ctrl)
+      {
+        Properties();
+        return false;
+      }
+      OpenSelectedItems(true);
+      return false;
+    }
     case NM_RCLICK:
       RefreshStatusBar();
       break;
@@ -302,11 +301,9 @@ bool CPanel::OnNotifyList(LPNMHDR header, LRESULT &result)
       // we need SetFocusToList, if we drag-select items from other panel.
       SetFocusToList();
       RefreshStatusBar();
-      if (_mySelectMode)
-        #ifndef UNDER_CE
-        if (g_ComCtl32Version >= MAKELONG(71, 4))
-        #endif
-          OnLeftClick((MY_NMLISTVIEW_NMITEMACTIVATE *)header);
+      if(_mySelectMode)
+        if(g_ComCtl32Version >= MAKELONG(71, 4))
+          OnLeftClick((LPNMITEMACTIVATE)header);
       return false;
     }
     case LVN_BEGINLABELEDITW:
@@ -328,11 +325,13 @@ bool CPanel::OnNotifyList(LPNMHDR header, LRESULT &result)
       RefreshStatusBar();
       break;
     }
+#endif
     // case LVN_BEGINRDRAG:
   }
   return false;
 }
 
+#ifdef _WIN32
 bool CPanel::OnCustomDraw(LPNMLVCUSTOMDRAW lplvcd, LRESULT &result)
 {
   switch(lplvcd->nmcd.dwDrawStage)
@@ -389,6 +388,7 @@ bool CPanel::OnCustomDraw(LPNMLVCUSTOMDRAW lplvcd, LRESULT &result)
   }
   return false;
 }
+#endif //#ifdef _WIN32
 
 void CPanel::OnRefreshStatusBar()
 {

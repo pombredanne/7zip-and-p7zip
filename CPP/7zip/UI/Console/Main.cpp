@@ -2,7 +2,7 @@
 
 #include "StdAfx.h"
 
-#if defined( _WIN32) && defined( _7ZIP_LARGE_PAGES)
+#if defined( _7ZIP_LARGE_PAGES)
 #include "../../../../C/Alloc.h"
 #endif
 
@@ -35,11 +35,14 @@
 
 #include "../../MyVersion.h"
 
+#include "myPrivate.h"
+#include "Windows/System.h"
+
 using namespace NWindows;
 using namespace NFile;
 using namespace NCommandLineParser;
 
-HINSTANCE g_hInstance = 0;
+// HINSTANCE g_hInstance = 0;
 extern CStdOutStream *g_StdStream;
 
 static const char *kCopyrightString = "\n7-Zip"
@@ -51,7 +54,8 @@ static const char *kCopyrightString = "\n7-Zip"
 " [64]"
 #endif
 
-" " MY_VERSION_COPYRIGHT_DATE "\n";
+" " MY_VERSION_COPYRIGHT_DATE "\n"
+"p7zip Version " P7ZIP_VERSION ;
 
 static const char *kHelpString =
     "\nUsage: 7z"
@@ -95,7 +99,6 @@ static const char *kHelpString =
     "  -slt: show technical information for l (List) command\n"
     "  -so: write data to stdout\n"
     "  -ssc[-]: set sensitive case mode\n"
-    "  -ssw: compress shared files\n"
     "  -t{Type}: Set type of archive\n"
     "  -u[-][p#][q#][r#][x#][y#][z#][!newArchiveName]: Update options\n"
     "  -v{Size}[b|k|m|g]: Create volumes\n"
@@ -139,8 +142,16 @@ static void GetArguments(int numArgs, const char *args[], UStringVector &parts)
 
 static void ShowCopyrightAndHelp(CStdOutStream &s, bool needHelp)
 {
-  s << kCopyrightString;
-  // s << "# CPUs: " << (UInt64)NWindows::NSystem::GetNumberOfProcessors() << "\n";
+    s << kCopyrightString << " (locale=" << my_getlocale() <<",Utf16=";
+    if (global_use_utf16_conversion) s << "on";
+    else                             s << "off";
+    s << ",HugeFiles=";
+    if (sizeof(off_t) >= 8) s << "on,";
+    else                    s << "off,";
+    int nbcpu = NWindows::NSystem::GetNumberOfProcessors();
+    if (nbcpu > 1) s << nbcpu << " CPUs)\n";
+    else           s << nbcpu << " CPU)\n";
+
   if (needHelp)
     s << kHelpString;
 }
@@ -182,7 +193,9 @@ int Main2(
   #ifdef _WIN32
   NCommandLineParser::SplitCommandLine(GetCommandLineW(), commandStrings);
   #else
-  GetArguments(numArgs, args, commandStrings);
+  // GetArguments(numArgs, args, commandStrings);
+  extern void mySplitCommandLine(int numArgs,const char *args[],UStringVector &parts);
+  mySplitCommandLine(numArgs,args,commandStrings);
   #endif
 
   if (commandStrings.Size() == 1)
@@ -204,11 +217,13 @@ int Main2(
     return 0;
   }
 
-  #if defined(_WIN32) && defined(_7ZIP_LARGE_PAGES)
+  #if defined(_7ZIP_LARGE_PAGES)
   if (options.LargePages)
   {
     SetLargePageSize();
+#ifdef _WIN32
     NSecurity::EnableLockMemoryPrivilege();
+#endif
   }
   #endif
 
@@ -521,6 +536,21 @@ int Main2(
     HRESULT result = UpdateArchive(codecs,
         options.WildcardCensor, uo,
         errorInfo, &openCallback, &callback);
+
+#ifdef ENV_UNIX
+    if (uo.SfxMode)
+    {
+        void myAddExeFlag(const UString &name);
+        for(int i = 0; i < uo.Commands.Size(); i++)
+        {
+            CUpdateArchiveCommand &command = uo.Commands[i];
+            if (!uo.StdOutMode)
+            {
+                myAddExeFlag(command.ArchivePath.GetFinalPath());
+            }
+        }
+    }
+#endif
 
     int exitCode = NExitCode::kSuccess;
     if (callback.CantFindFiles.Size() > 0)

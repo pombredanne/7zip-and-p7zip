@@ -44,9 +44,23 @@ typedef struct LARGE_INTEGER { LONGLONG QuadPart; }LARGE_INTEGER;
 typedef struct _ULARGE_INTEGER { ULONGLONG QuadPart;} ULARGE_INTEGER;
 
 typedef const CHAR *LPCSTR;
-typedef CHAR TCHAR;
-typedef const TCHAR *LPCTSTR;
+
 typedef wchar_t WCHAR;
+
+#ifdef _UNICODE
+typedef WCHAR TCHAR;
+#define lstrcpy wcscpy
+#define lstrcat wcscat
+#define lstrlen wcslen
+#else
+typedef CHAR TCHAR;
+#define lstrcpy strcpy
+#define lstrcat strcat
+#define lstrlen strlen
+#endif
+#define _wcsicmp(str1,str2) MyStringCompareNoCase(str1,str2)
+
+typedef const TCHAR *LPCTSTR;
 typedef WCHAR OLECHAR;
 typedef const WCHAR *LPCWSTR;
 typedef OLECHAR *BSTR;
@@ -187,7 +201,7 @@ MY_EXTERN_C void SysFreeString(BSTR bstr);
 MY_EXTERN_C UINT SysStringByteLen(BSTR bstr);
 MY_EXTERN_C UINT SysStringLen(BSTR bstr);
 
-MY_EXTERN_C DWORD GetLastError();
+/* MY_EXTERN_C DWORD GetLastError(); */
 MY_EXTERN_C LONG CompareFileTime(const FILETIME* ft1, const FILETIME* ft2);
 
 #define CP_ACP    0

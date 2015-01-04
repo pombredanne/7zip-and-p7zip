@@ -62,8 +62,10 @@ struct CListViewInfo
 void SaveListViewInfo(const UString &id, const CListViewInfo &viewInfo);
 void ReadListViewInfo(const UString &id, CListViewInfo &viewInfo);
 
+#ifdef _WIN32
 void SaveWindowSize(const RECT &rect, bool maximized);
 bool ReadWindowSize(RECT &rect, bool &maximized);
+#endif
 
 void SavePanelsInfo(UInt32 numPanels, UInt32 currentPanel, UInt32 splitterPos);
 bool ReadPanelsInfo(UInt32 &numPanels, UInt32 &currentPanel, UInt32 &splitterPos);

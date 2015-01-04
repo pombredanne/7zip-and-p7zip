@@ -12,6 +12,8 @@
 extern bool g_IsNT;
 #endif
 
+#ifdef _WIN32
+
 int GetIconIndexForCSIDL(int csidl)
 {
   LPITEMIDLIST pidl = 0;
@@ -157,3 +159,15 @@ int CExtToIconMap::GetIconIndex(DWORD attrib, const UString &fileName)
   UString typeName;
   return GetIconIndex(attrib, fileName, typeName);
 }
+#else
+DWORD_PTR GetRealIconIndex(LPCTSTR path, DWORD attrib, int &iconIndex)
+{
+  iconIndex = -1;
+  return -1;
+}
+int CExtToIconMap::GetIconIndex(DWORD attrib, const UString &fileName)
+{
+  return -1;
+}
+#endif
+

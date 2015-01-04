@@ -337,7 +337,7 @@ HRESULT CArc::OpenStreamOrFile(
     seqStream = new CStdInFileStream;
   else if (!stream)
   {
-    CInFileStream *fileStreamSpec = new CInFileStream;
+    CInFileStream *fileStreamSpec = new CInFileStream(true);
     fileStream = fileStreamSpec;
     if (!fileStreamSpec->Open(Path))
       return GetLastError();
@@ -526,7 +526,7 @@ HRESULT CArchiveLink::ReOpen(CCodecs *codecs, const UString &filePath,
   CMyComPtr<IArchiveOpenCallback> openCallbackNew;
   SetCallback(filePath, NULL, callback, openCallbackNew);
 
-  CInFileStream *fileStreamSpec = new CInFileStream;
+  CInFileStream *fileStreamSpec = new CInFileStream(true);
   CMyComPtr<IInStream> stream(fileStreamSpec);
   if (!fileStreamSpec->Open(filePath))
     return GetLastError();

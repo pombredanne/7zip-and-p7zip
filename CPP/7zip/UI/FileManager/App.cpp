@@ -46,8 +46,8 @@ void CPanelCallbackImp::SetFocusToPath(int index)
   if (g_App.NumPanels == 1)
     newPanelIndex = g_App.LastFocusedPanel;
   _app->RefreshTitle();
-  _app->Panels[newPanelIndex]._headerComboBox.SetFocus();
-  _app->Panels[newPanelIndex]._headerComboBox.ShowDropDown();
+  // _app->Panels[newPanelIndex]._headerComboBox.SetFocus();
+  // _app->Panels[newPanelIndex]._headerComboBox.ShowDropDown();
 }
 
 
@@ -64,13 +64,15 @@ void CApp::SetListSettings()
   bool showDots = ReadShowDots();
   bool showRealFileIcons = ReadShowRealFileIcons();
 
-  DWORD extendedStyle = LVS_EX_HEADERDRAGDROP;
+  DWORD extendedStyle =0; /* FIXME = LVS_EX_HEADERDRAGDROP;
   if (ReadFullRow())
     extendedStyle |= LVS_EX_FULLROWSELECT;
   if (ReadShowGrid())
     extendedStyle |= LVS_EX_GRIDLINES;
+    */
   bool mySelectionMode = ReadAlternativeSelection();
   
+#ifdef _WIN32
   if (ReadSingleClick())
   {
     extendedStyle |= LVS_EX_ONECLICKACTIVATE | LVS_EX_TRACKSELECT;
@@ -79,6 +81,7 @@ void CApp::SetListSettings()
       extendedStyle |= LVS_EX_UNDERLINEHOT;
     */
   }
+#endif
 
   for (int i = 0; i < kNumPanelsMax; i++)
   {
@@ -88,12 +91,14 @@ void CApp::SetListSettings()
     panel._showRealFileIcons = showRealFileIcons;
     panel._exStyle = extendedStyle;
 
+    /* FIXME
     DWORD style = (DWORD)panel._listView.GetStyle();
     if (mySelectionMode)
       style |= LVS_SINGLESEL;
     else
       style &= ~LVS_SINGLESEL;
     panel._listView.SetStyle(style);
+    */
     panel.SetExtendedStyle();
   }
 }
@@ -128,6 +133,7 @@ HRESULT CApp::CreateOnePanel(int panelIndex, const UString &mainPath, const UStr
   return S_OK;
 }
 
+#if _WIN32
 static void CreateToolbar(HWND parent,
     NWindows::NControl::CImageList &imageList,
     NWindows::NControl::CToolBar &toolBar,
@@ -157,6 +163,7 @@ static void CreateToolbar(HWND parent,
       ILC_MASK | ILC_COLOR32, 0, 0);
   toolBar.SetImageList(0, imageList);
 }
+#endif
 
 struct CButtonInfo
 {
@@ -206,6 +213,7 @@ static void SetButtonText(int commandID, UString &s)
       sizeof(g_ArchiveButtons) / sizeof(g_ArchiveButtons[0]), s);
 }
 
+#ifdef _WIN32
 static void AddButton(
     NControl::CImageList &imageList,
     NControl::CToolBar &toolBar,
@@ -260,12 +268,15 @@ void CApp::ReloadToolbars()
     _toolBar.AutoSize();
   }
 }
+#endif
 
 void CApp::SaveToolbarChanges()
 {
+#ifdef _WIN32
   SaveToolbar();
   ReloadToolbars();
   MoveSubWindows();
+#endif // #ifdef _WIN32
 }
 
 void MyLoadMenu();
@@ -273,16 +284,10 @@ void MyLoadMenu();
 HRESULT CApp::Create(HWND hwnd, const UString &mainPath, const UString &arcFormat, int xSizes[2], bool &archiveIsOpened, bool &encrypted)
 {
   _window.Attach(hwnd);
-  #ifdef UNDER_CE
-  _commandBar.Create(g_hInstance, hwnd, 1);
-  #endif
-  MyLoadMenu();
-  #ifdef UNDER_CE
-  _commandBar.AutoSize();
-  #endif
-
+#ifdef _WIN32
   ReadToolbar();
   ReloadToolbars();
+#endif
 
   int i;
   for (i = 0; i < kNumPanelsMax; i++)
@@ -330,14 +335,14 @@ HRESULT CApp::SwitchOnOffOnePanel()
     NumPanels++;
     bool archiveIsOpened, encrypted;
     RINOK(CreateOnePanel(1 - LastFocusedPanel, UString(), UString(), archiveIsOpened, encrypted));
-    Panels[1 - LastFocusedPanel].Enable(true);
-    Panels[1 - LastFocusedPanel].Show(SW_SHOWNORMAL);
+    // FIXME Panels[1 - LastFocusedPanel].Enable(true);
+    // FIXME Panels[1 - LastFocusedPanel].Show(SW_SHOWNORMAL);
   }
   else
   {
     NumPanels--;
-    Panels[1 - LastFocusedPanel].Enable(false);
-    Panels[1 - LastFocusedPanel].Show(SW_HIDE);
+    // FIXME Panels[1 - LastFocusedPanel].Enable(false);
+    // FIXME Panels[1 - LastFocusedPanel].Show(SW_HIDE);
   }
   MoveSubWindows();
   return S_OK;
@@ -387,7 +392,7 @@ static void ReducePathToRealFileSystemPath(UString &path)
       path = path.Left(pos + 1);
       if (path.Length() == 3 && path[1] == L':')
         break;
-      if (path.Length() > 2 && path[0] == '\\' && path[1] == '\\')
+      if (path.Length() > 2 && path[0] == WCHAR_PATH_SEPARATOR && path[1] == WCHAR_PATH_SEPARATOR)
       {
         int nextPos = path.Find(WCHAR_PATH_SEPARATOR, 2); // pos after \\COMPNAME
         if (nextPos > 0 && path.Find(WCHAR_PATH_SEPARATOR, nextPos + 1) == pos)
@@ -410,10 +415,10 @@ static bool IsPathAbsolute(const UString &path)
 {
   if (path.Length() >= 1 && path[0] == WCHAR_PATH_SEPARATOR)
     return true;
-  #ifdef _WIN32
+//  #ifdef _WIN32
   if (path.Length() >= 3 && path[1] == L':' && path[2] == L'\\')
     return true;
-  #endif
+//  #endif
   return false;
 }
 
@@ -495,7 +500,18 @@ UString CPanel::GetItemsInfoString(const CRecordVector<UInt32> &indices)
     AddValuePair1(IDS_SIZE_COLON, 0x02000322, filesSize + foldersSize, info);
   
   info += L"\n";
+#ifdef _WIN32
   info += _currentFolderPrefix;
+#else
+  {
+    extern const TCHAR * nameWindowToUnix(const TCHAR * lpFileName);
+
+    UString tmp = nameWindowToUnix(_currentFolderPrefix);
+
+    info += tmp;
+  }
+#endif
+
   
   for (i = 0; i < indices.Size() && i < kCopyDialog_NumInfoLines - 6; i++)
   {
@@ -781,6 +797,7 @@ int CApp::GetFocusedPanelIndex() const
 static UString g_ToolTipBuffer;
 static CSysString g_ToolTipBufferSys;
 
+#ifdef _WIN32
 void CApp::OnNotify(int /* ctrlID */, LPNMHDR pnmh)
 {
   {
@@ -807,10 +824,18 @@ void CApp::OnNotify(int /* ctrlID */, LPNMHDR pnmh)
     #endif
   }
 }
+#endif
 
 void CApp::RefreshTitle(bool always)
 {
   UString path = GetFocusedPanel()._currentFolderPrefix;
+#ifndef _WIN32	
+  {
+	extern const TCHAR * nameWindowToUnix(const TCHAR * lpFileName);
+    UString tmp = nameWindowToUnix(path);
+	path = tmp;
+  }	
+#endif	
   if (path.IsEmpty())
     path += LangString(IDS_APP_TITLE, 0x03000000);
   if (!always && path == PrevTitle)

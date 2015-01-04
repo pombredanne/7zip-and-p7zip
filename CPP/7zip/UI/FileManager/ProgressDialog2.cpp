@@ -92,7 +92,7 @@ CProgressDialog::CProgressDialog(): _timer(0), CompressingMode(true)
     _waitCloseByCancelButton = false;
     _cancelWasPressed = false;
     ShowCompressionInfo = true;
-    WaitMode = false;
+    // FIXME not supported WaitMode = false;
     if (_dialogCreatedEvent.Create() != S_OK)
       throw 1334987;
     if (_createDialogEvent.Create() != S_OK)
@@ -145,7 +145,7 @@ bool CProgressDialog::OnInit()
   _foreground = true;
 
   m_ProgressBar.Attach(GetItem(IDC_PROGRESS1));
-  _messageList.Attach(GetItem(IDC_PROGRESS_LIST));
+  // FIXME _messageList.Attach(GetItem(IDC_PROGRESS_LIST));
 
   _wasCreated = true;
   _dialogCreatedEvent.Set();
@@ -173,22 +173,24 @@ bool CProgressDialog::OnInit()
 
 
   #ifndef UNDER_CE
-  _messageList.SetUnicodeFormat(true);
+  // FIXME _messageList.SetUnicodeFormat(true);
   #endif
 
-  _messageList.InsertColumn(0, L"", 30);
+  // FIXME _messageList.InsertColumn(0, L"", 30);
 
   const UString s = LangStringSpec(IDS_MESSAGES_DIALOG_MESSAGE_COLUMN, 0x02000A80);
 
-  _messageList.InsertColumn(1, s, 600);
+  // FIXME _messageList.InsertColumn(1, s, 600);
 
-  _messageList.SetColumnWidthAuto(0);
-  _messageList.SetColumnWidthAuto(1);
+  // FIXME _messageList.SetColumnWidthAuto(0);
+  // FIXME _messageList.SetColumnWidthAuto(1);
 
 
   EnableErrorsControls(false);
 
+#ifdef _WIN32
   GetItemSizes(IDCANCEL, buttonSizeX, buttonSizeY);
+#endif
   _numReduceSymbols = kCurrentFileNameSizeLimit;
   NormalizeSize(true);
 
@@ -200,12 +202,14 @@ bool CProgressDialog::OnInit()
     HideItem(IDC_PROGRESS_RATIO_VALUE);
   }
 
+#ifdef _WIN32
   if (IconID >= 0)
   {
     HICON icon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IconID));
     // SetIcon(ICON_SMALL, icon);
     SetIcon(ICON_BIG, icon);
   }
+#endif
   _timer = SetTimer(kTimerID, kTimerElapse);
   #ifdef UNDER_CE
   Foreground();
@@ -218,6 +222,7 @@ bool CProgressDialog::OnInit()
 
 bool CProgressDialog::OnSize(WPARAM /* wParam */, int xSize, int ySize)
 {
+#ifdef _WIN32
   int sY;
   int sStep;
   int mx, my;
@@ -279,7 +284,7 @@ bool CProgressDialog::OnSize(WPARAM /* wParam */, int xSize, int ySize)
         xx -= bSizeX;
     }
 
-    _messageList.Move(mx, y, xx, ySize2);
+    // FIXME _messageList.Move(mx, y, xx, ySize2);
   }
 
   {
@@ -348,6 +353,7 @@ bool CProgressDialog::OnSize(WPARAM /* wParam */, int xSize, int ySize)
     MoveItem(IDs[i + 1], x + labelSize, yPos, valueSize, sY);
     yPos += sStep;
   }
+#endif // ifdef _WIN32
   return false;
 }
 
@@ -620,6 +626,7 @@ bool CProgressDialog::OnTimer(WPARAM /* timerID */, LPARAM /* callback */)
   return true;
 }
 
+#ifdef _WIN32 // FIXME
 struct CWaitCursor
 {
   HCURSOR _waitCursor;
@@ -636,12 +643,14 @@ struct CWaitCursor
       SetCursor(_oldCursor);
   }
 };
+#endif
 
 INT_PTR CProgressDialog::Create(const UString &title, NWindows::CThread &thread, HWND wndParent)
 {
   INT_PTR res = 0;
   try
   {
+#ifdef _WIN32
     if (WaitMode)
     {
       CWaitCursor waitCursor;
@@ -657,6 +666,7 @@ INT_PTR CProgressDialog::Create(const UString &title, NWindows::CThread &thread,
       if (res == WAIT_OBJECT_0 && !Sync.ThereIsMessage())
         return 0;
     }
+#endif
     _title = title;
     BIG_DIALOG_SIZE(360, 192);
     res = CModalDialog::Create(SIZED_DIALOG(IDD_DIALOG_PROGRESS), wndParent);
@@ -714,9 +724,37 @@ bool CProgressDialog::OnExternalCloseMessage()
 
   if (thereAreMessages && !_cancelWasPressed)
   {
-    _waitCloseByCancelButton = true;
+
+#ifdef _WIN32
+    _waitCloseByCancelButton = true;	  
     UpdateMessagesDialog();
     return true;
+#else
+ 
+	// FIXME : p7zip does not have a messages zone
+	// FIXME : even if so, the close button does not close the main window
+	// So p7zip uses a MessageBoxW ...
+	  UStringVector messages;
+	  {
+		  NWindows::NSynchronization::CCriticalSectionLock lock(Sync._cs);
+		  for (int i = 0; i < Sync.Messages.Size(); i++)
+			  messages.Add(Sync.Messages[i]);
+		  _numPostedMessages = Sync.Messages.Size();
+	  }
+	  
+	  if (!messages.IsEmpty())
+	  {
+		  for (int i = 0; i < messages.Size(); i++)
+			  errorMessage = errorMessage + messages[i] + L"\n";
+	  }
+	  else
+		  errorMessage = L"Error(s) in the archive";
+	  
+	  MessageBoxW(*this, errorMessage, L"7-Zip - ERROR", MB_ICONERROR | MB_OK);
+
+	  MessagesDisplayed = true;
+	  
+#endif	  
   }
 
   End(0);
@@ -824,11 +862,13 @@ void CProgressDialog::OnPriorityButton()
 
 void CProgressDialog::AddMessageDirect(LPCWSTR message)
 {
+#ifdef _WIN32 // FIXME
   int itemIndex = _messageList.GetItemCount();
   wchar_t sz[32];
   ConvertInt64ToString(itemIndex, sz);
   _messageList.InsertItem(itemIndex, sz);
   _messageList.SetSubItem(itemIndex, 1, message);
+#endif
 }
 
 void CProgressDialog::AddMessage(LPCWSTR message)
@@ -868,8 +908,8 @@ void CProgressDialog::UpdateMessagesDialog()
       AddMessage(messages[i]);
     if (_numAutoSizeMessages < 256 || GetNumDigits(_numPostedMessages) > GetNumDigits(_numAutoSizeMessages))
     {
-      _messageList.SetColumnWidthAuto(0);
-      _messageList.SetColumnWidthAuto(1);
+      // FIXME_messageList.SetColumnWidthAuto(0);
+      // FIXME_messageList.SetColumnWidthAuto(1);
       _numAutoSizeMessages = _numPostedMessages;
     }
   }
@@ -934,7 +974,7 @@ void CProgressDialog::CheckNeedClose()
 void CProgressDialog::ProcessWasFinished()
 {
   // Set Window title here.
-  if (!WaitMode)
+  // FIXME - not supported if (!WaitMode)
     WaitCreating();
   
   if (_wasCreated)

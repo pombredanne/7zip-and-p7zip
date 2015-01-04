@@ -1,126 +1,124 @@
-PROG = 7zG.exe
-CFLAGS = $(CFLAGS) -I ../../../  \
-  -DLANG \
-  -DEXTERNAL_CODECS \
+PROG=../../../../bin/7zG$(BINSUFFIX)
 
-!IFDEF UNDER_CE
-LIBS = $(LIBS) ceshell.lib Commctrl.lib
-!ELSE
-LIBS = $(LIBS) comctl32.lib htmlhelp.lib comdlg32.lib
-CFLAGS = $(CFLAGS) -DWIN_LONG_PATH -DSUPPORT_DEVICE_FILE -D_7ZIP_LARGE_PAGES
-!ENDIF
+LOCAL_FLAGS=\
+	-DUNICODE -D_UNICODE \
+	-DLANG \
+	-DEXTERNAL_LZMA \
+	-DEXTERNAL_CODECS \
+	-DBENCH_MT \
+	-I. \
+	`wx-config --unicode=yes --cxxflags`
+
+include ../../../../makefile.crc32
+include ../../../../makefile.machine
+
+PCH_NAME=$(PRE_COMPILED_HEADER)
+
+LIBS=`wx-config --unicode=yes --libs` $(LOCAL_LIBS_DLL)
 
 GUI_OBJS = \
-  $O\BenchmarkDialog.obj \
-  $O\CompressDialog.obj \
-  $O\ExtractDialog.obj \
-  $O\ExtractGUI.obj \
-  $O\GUI.obj \
-  $O\UpdateCallbackGUI.obj \
-  $O\UpdateGUI.obj \
+ BenchmarkDialog.o \
+ BenchmarkDialog_rc.o \
+ CompressDialog.o \
+ CompressDialog_rc.o \
+ ExtractDialog.o \
+ ExtractDialog_rc.o \
+ ExtractGUI.o \
+ GUI.o \
+ wxGUI.o \
+ UpdateCallbackGUI.o \
+ UpdateGUI.o \
 
 COMMON_OBJS = \
-  $O\CommandLineParser.obj \
-  $O\CRC.obj \
-  $O\IntToString.obj \
-  $O\Lang.obj \
-  $O\ListFileUtils.obj \
-  $O\MyString.obj \
-  $O\MyVector.obj \
-  $O\NewHandler.obj \
-  $O\StringConvert.obj \
-  $O\StringToInt.obj \
-  $O\TextConfig.obj \
-  $O\UTFConvert.obj \
-  $O\Wildcard.obj \
+CommandLineParser.o \
+CRC.o \
+IntToString.o \
+Lang.o \
+ListFileUtils.o \
+MyString.o \
+MyVector.o \
+StringConvert.o \
+StringToInt.o \
+TextConfig.o \
+UTFConvert.o \
+Wildcard.o \
 
+# CommonDialog.o MemoryLock.o ResourceString.o ResourceString.o Shell.o
 WIN_OBJS = \
-  $O\CommonDialog.obj \
-  $O\DLL.obj \
-  $O\Error.obj \
-  $O\FileDir.obj \
-  $O\FileFind.obj \
-  $O\FileIO.obj \
-  $O\FileName.obj \
-  $O\MemoryLock.obj \
-  $O\PropVariant.obj \
-  $O\PropVariantConversions.obj \
-  $O\Registry.obj \
-  $O\ResourceString.obj \
-  $O\Shell.obj \
-  $O\Synchronization.obj \
-  $O\System.obj \
-  $O\Time.obj \
-  $O\Window.obj \
+DLL.o \
+Error.o \
+FileDir.o \
+FileFind.o \
+FileIO.o \
+FileName.o \
+PropVariant.o \
+PropVariantConversions.o \
+Registry.o \
+Synchronization.o \
+System.o \
+Time.o \
+Window.o \
 
 WIN_CTRL_OBJS = \
-  $O\ComboBox.obj \
-  $O\Dialog.obj \
-  $O\ListView.obj \
+Dialog.o \
+Controls.o \
 
 7ZIP_COMMON_OBJS = \
-  $O\CreateCoder.obj \
-  $O\FilePathAutoRename.obj \
-  $O\FileStreams.obj \
-  $O\FilterCoder.obj \
-  $O\ProgressUtils.obj \
-  $O\StreamUtils.obj \
+CreateCoder.o \
+FilePathAutoRename.o \
+FileStreams.o \
+FilterCoder.o \
+ProgressUtils.o \
+StreamUtils.o \
 
 UI_COMMON_OBJS = \
-  $O\ArchiveCommandLine.obj \
-  $O\ArchiveExtractCallback.obj \
-  $O\ArchiveOpenCallback.obj \
-  $O\Bench.obj \
-  $O\DefaultName.obj \
-  $O\EnumDirItems.obj \
-  $O\Extract.obj \
-  $O\ExtractingFilePath.obj \
-  $O\LoadCodecs.obj \
-  $O\OpenArchive.obj \
-  $O\PropIDUtils.obj \
-  $O\SetProperties.obj \
-  $O\SortUtils.obj \
-  $O\TempFiles.obj \
-  $O\Update.obj \
-  $O\UpdateAction.obj \
-  $O\UpdateCallback.obj \
-  $O\UpdatePair.obj \
-  $O\UpdateProduce.obj \
-  $O\WorkDir.obj \
-  $O\ZipRegistry.obj \
+ArchiveCommandLine.o \
+ArchiveExtractCallback.o \
+ArchiveOpenCallback.o \
+Bench.o \
+DefaultName.o \
+EnumDirItems.o \
+Extract.o \
+ExtractingFilePath.o \
+LoadCodecs.o \
+OpenArchive.o \
+PropIDUtils.o \
+SetProperties.o \
+SortUtils.o \
+TempFiles.o \
+Update.o \
+UpdateAction.o \
+UpdateCallback.o \
+UpdatePair.o \
+UpdateProduce.o \
+WorkDir.o \
+ZipRegistry.o \
 
 AR_COMMON_OBJS = \
-  $O\OutStreamWithCRC.obj \
+ OutStreamWithCRC.o
 
 FM_OBJS = \
-  $O\ExtractCallback.obj \
-  $O\FormatUtils.obj \
-  $O\HelpUtils.obj \
-  $O\LangUtils.obj \
-  $O\OpenCallback.obj \
-  $O\ProgramLocation.obj \
-  $O\RegistryUtils.obj \
-  $O\SplitUtils.obj \
-  $O\StringUtils.obj \
-  $O\OverwriteDialog.obj \
-  $O\PasswordDialog.obj \
-  $O\ProgressDialog2.obj \
+ExtractCallback.o \
+FormatUtils.o \
+LangUtils.o \
+ProgramLocation.o \
+SplitUtils.o \
+StringUtils.o \
+MessagesDialog.o \
+MessagesDialog_rc.o \
+OverwriteDialog.o \
+OverwriteDialog_rc.o \
+PasswordDialog.o \
+PasswordDialog_rc.o \
+ProgressDialog2.o \
+ProgressDialog2_rc.o \
 
-!IFDEF UNDER_CE
-FM_OBJS = $(FM_OBJS) \
-  $O\BrowseDialog.obj \
-  $O\SysIconUtils.obj \
-!ENDIF
 
 C_OBJS = \
-  $O\Alloc.obj \
-  $O\CpuArch.obj \
-  $O\Threads.obj \
+  Alloc.o \
+  Threads.o \
 
-!include "../../Crc.mak"
-
-OBJS = \
-  $O\StdAfx.obj \
+OBJS=\
   $(GUI_OBJS) \
   $(COMMON_OBJS) \
   $(WIN_OBJS) \
@@ -129,37 +127,13 @@ OBJS = \
   $(UI_COMMON_OBJS) \
   $(AR_COMMON_OBJS) \
   $(FM_OBJS)\
-  $O\MyMessages.obj \
-  $O\CopyCoder.obj \
-  $(LZMA_BENCH_OBJS) \
+  MyMessages.o \
+  CopyCoder.o \
   $(C_OBJS) \
-  $(ASM_OBJS) \
-  $O\resource.res
+  MyWindows.o \
+  wine_date_and_time.o \
+  wine_GetXXXDefaultLangID.o \
+  $(OBJ_CRC32)
 
-!include "../../../Build.mak"
+include ../../../../makefile.glb
 
-$(GUI_OBJS): $(*B).cpp
-	$(COMPL)
-$(COMMON_OBJS): ../../../Common/$(*B).cpp
-	$(COMPL)
-$(WIN_OBJS): ../../../Windows/$(*B).cpp
-	$(COMPL)
-$(WIN_CTRL_OBJS): ../../../Windows/Control/$(*B).cpp
-	$(COMPL)
-$(7ZIP_COMMON_OBJS): ../../Common/$(*B).cpp
-	$(COMPL)
-$(UI_COMMON_OBJS): ../Common/$(*B).cpp
-	$(COMPL)
-$(AR_COMMON_OBJS): ../../Archive/Common/$(*B).cpp
-	$(COMPL)
-$(FM_OBJS): ../FileManager/$(*B).cpp
-	$(COMPL)
-$O\MyMessages.obj: ../Explorer/MyMessages.cpp
-	$(COMPL)
-
-$O\CopyCoder.obj: ../../Compress/$(*B).cpp
-	$(COMPL)
-$(C_OBJS): ../../../../C/$(*B).c
-	$(COMPL_O2)
-
-!include "../../Asm.mak"

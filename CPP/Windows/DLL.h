@@ -5,27 +5,26 @@
 
 #include "../Common/MyString.h"
 
+typedef void * HMODULE;
+
+typedef int (*FARPROC)();
+
 namespace NWindows {
 namespace NDLL {
 
-#ifdef UNDER_CE
-#define My_GetProcAddress(module, proceName) GetProcAddressA(module, proceName)
-#else
-#define My_GetProcAddress(module, proceName) ::GetProcAddress(module, proceName)
-#endif
- 
 class CLibrary
 {
   bool LoadOperations(HMODULE newModule);
-protected:
   HMODULE _module;
 public:
-  CLibrary(): _module(NULL) {};
-  ~CLibrary() { Free(); }
-
   operator HMODULE() const { return _module; }
   HMODULE* operator&() { return &_module; }
-  bool IsLoaded() const { return (_module != NULL); };
+
+
+  CLibrary():_module(NULL) {};
+  ~CLibrary();
+
+  bool Free();
 
   void Attach(HMODULE m)
   {
@@ -39,20 +38,10 @@ public:
     return m;
   }
 
-  bool Free();
-  bool LoadEx(LPCTSTR fileName, DWORD flags = LOAD_LIBRARY_AS_DATAFILE);
-  bool Load(LPCTSTR fileName);
-  #ifndef _UNICODE
-  bool LoadEx(LPCWSTR fileName, DWORD flags = LOAD_LIBRARY_AS_DATAFILE);
-  bool Load(LPCWSTR fileName);
-  #endif
-  FARPROC GetProc(LPCSTR procName) const { return My_GetProcAddress(_module, procName); }
-};
 
-bool MyGetModuleFileName(HMODULE hModule, CSysString &result);
-#ifndef _UNICODE
-bool MyGetModuleFileName(HMODULE hModule, UString &result);
-#endif
+  bool Load(LPCTSTR fileName);
+  FARPROC GetProc(LPCSTR procName) const;
+};
 
 }}
 

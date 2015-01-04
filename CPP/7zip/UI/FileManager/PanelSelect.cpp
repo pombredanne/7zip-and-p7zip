@@ -39,6 +39,7 @@ void CPanel::OnShiftSelectMessage()
   _prevFocusedItem = focusedItem;
 }
 
+#ifdef _WIN32
 void CPanel::OnArrowWithShift()
 {
   if (!_mySelectMode)
@@ -97,10 +98,12 @@ void CPanel::OnInsert()
   int nextIndex = focusedItem + 1;
   if (nextIndex < _listView.GetItemCount())
   {
-    _listView.SetItemState_FocusedSelected(nextIndex);
+    _listView.SetItemState(nextIndex, LVIS_FOCUSED | LVIS_SELECTED, 
+        LVIS_FOCUSED | LVIS_SELECTED);
     _listView.EnsureVisible(nextIndex, false);
   }
 }
+#endif // _WIN32
 
 /*
 void CPanel::OnUpWithShift()
@@ -126,11 +129,13 @@ void CPanel::OnDownWithShift()
 
 void CPanel::UpdateSelection()
 {
+printf("CPanel::UpdateSelection : _mySelectMode=%d\n",(int)_mySelectMode);
   if (!_mySelectMode)
   {
     bool enableTemp = _enableItemChangeNotify;
     _enableItemChangeNotify = false;
     int numItems = _listView.GetItemCount();
+printf("CPanel::UpdateSelection : numItems=%d\n",(int)numItems);
     for (int i = 0; i < numItems; i++)
     {
       int realIndex = GetRealItemIndex(i);
@@ -138,6 +143,7 @@ void CPanel::UpdateSelection()
       {
         UINT value = 0;
         value = _selectedStatusVector[realIndex] ? LVIS_SELECTED: 0;
+printf("CPanel::UpdateSelection : SetItemState(%d,%d,LVIS_SELECTED)\n",(int)i,(unsigned)value);
         _listView.SetItemState(i, value, LVIS_SELECTED);
       }
     }
@@ -150,7 +156,7 @@ void CPanel::UpdateSelection()
 void CPanel::SelectSpec(bool selectMode)
 {
   CComboDialog comboDialog;
-  comboDialog.Title = selectMode ?
+  comboDialog.Title = selectMode ? 
       LangString(IDS_SELECT, 0x03020250):
       LangString(IDS_DESELECT, 0x03020251);
   comboDialog.Static = LangString(IDS_SELECT_MASK, 0x03020252);
@@ -245,26 +251,19 @@ void CPanel::KillSelection()
   {
     int focused = _listView.GetFocusedItem();
     if (focused >= 0)
-    {
-      // CPanel::OnItemChanged notify for LVIS_SELECTED change doesn't work here. Why?
-      // so we change _selectedStatusVector[realIndex] here.
-      int realIndex = GetRealItemIndex(focused);
-      if (realIndex != kParentIndex)
-        _selectedStatusVector[realIndex] = true;
       _listView.SetItemState(focused, LVIS_SELECTED, LVIS_SELECTED);
-    }
   }
 }
 
-void CPanel::OnLeftClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActivate)
+#ifdef _WIN32
+void CPanel::OnLeftClick(LPNMITEMACTIVATE itemActivate)
 {
-  if (itemActivate->hdr.hwndFrom != HWND(_listView))
+  if(itemActivate->hdr.hwndFrom != HWND(_listView))
     return;
   // It will be work only for Version 4.71 (IE 4);
   int indexInList = itemActivate->iItem;
   if (indexInList < 0)
     return;
-  #ifndef UNDER_CE
   if ((itemActivate->uKeyFlags & LVKF_SHIFT) != 0)
   {
     // int focusedIndex = _listView.GetFocusedItem();
@@ -286,11 +285,9 @@ void CPanel::OnLeftClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActivate)
       }
     }
   }
-  else
-  #endif
+  else 
   {
     _startGroupSelect = indexInList;
-    #ifndef UNDER_CE
     if ((itemActivate->uKeyFlags & LVKF_CONTROL) != 0)
     {
       int realIndex = GetRealItemIndex(indexInList);
@@ -300,7 +297,9 @@ void CPanel::OnLeftClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActivate)
         _listView.RedrawItem(indexInList);
       }
     }
-    #endif
   }
   return;
 }
+#endif
+
+

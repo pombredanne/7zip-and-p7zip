@@ -1,61 +1,96 @@
-// MyLoadMenu.cpp
+// MyLoadMenu
 
 #include "StdAfx.h"
 
+// For compilers that support precompilation, includes "wx/wx.h".
+#include "wx/wxprec.h"
+
+#ifdef __BORLANDC__
+#pragma hdrstop
+#endif
+
+#ifndef WX_PRECOMP
+#include "wx/wx.h"
+#endif
+
+#undef _WIN32
+
+#include <wx/aboutdlg.h>
+
+typedef wxMenuBar * HMENU;
+
+#include "Common/StringConvert.h"
+
 #include "Windows/Menu.h"
-#include "Windows/Control/Dialog.h"
+#include "Windows/Error.h"
+// FIXME #include "Windows/Clipboard.h"
 
 #include "../../PropID.h"
 
+#include "resource.h"
+#include "App.h"
+// FIXME #include "AboutDialog.h"
 #include "../Common/CompressCall.h"
 
-#include "AboutDialog.h"
-#include "App.h"
 #include "HelpUtils.h"
 #include "LangUtils.h"
-#include "RegistryUtils.h"
+#include "PluginInterface.h"
 
-#include "resource.h"
-
-using namespace NWindows;
+#include "../../MyVersion.h"
 
 static const UINT kOpenBookmarkMenuID = 730;
 static const UINT kSetBookmarkMenuID = 740;
 
 extern HINSTANCE g_hInstance;
 
-static LPCWSTR kFMHelpTopic = L"FM/index.htm";
+static LPCWSTR kFMHelpTopic = L"fm/index.htm";
 
 extern void OptionsDialog(HWND hwndOwner, HINSTANCE hInstance);
 
-enum
+using namespace NWindows;
+
+static const int kFileMenuIndex = 0;
+static const int kEditMenuIndex = 1;
+static const int kViewMenuIndex = 2;
+static const int kBookmarksMenuIndex = kViewMenuIndex + 1;
+
+struct CStringLangPair
 {
-  kMenuIndex_File = 0,
-  kMenuIndex_Edit,
-  kMenuIndex_View,
-  kMenuIndex_Bookmarks
+  wchar_t *String;
+  UINT32 LangID;
 };
 
-static const UInt32 kTopMenuLangIDs[] =
+static CStringLangPair kStringLangPairs[] = 
 {
-  0x03000102,
-  0x03000103,
-  0x03000104,
-  0x03000107,
-  0x03000105,
-  0x03000106
+  { L"&File",  0x03000102 },
+  { L"&Edit",  0x03000103 },
+  { L"&View",  0x03000104 },
+  { L"&Bookmarks", 0x03000107 },
+  { L"&Tools", 0x03000105 },
+  { L"&Help",  0x03000106 },
 };
 
-static const UInt32 kAddToFavoritesLangID = 0x03000710;
-static const UInt32 kToolbarsLangID = 0x03000451;
+UINT32 kAddToFavoritesLangID = 0x03000710;
+UINT32 kToolbarsLangID = 0x03000451;
 
-static const CIDLangPair kIDLangPairs[] =
+/*
+static int FindStringLangItem(const UString &anItem)
+{
+  for (int i = 0; i < sizeof(kStringLangPairs) / 
+      sizeof(kStringLangPairs[0]); i++)
+    if (anItem.CompareNoCase(kStringLangPairs[i].String) == 0)
+      return i;
+  return -1;
+}
+*/
+
+static CIDLangPair kIDLangPairs[] = 
 {
   // File
   { IDM_FILE_OPEN, 0x03000210 },
   { IDM_FILE_OPEN_INSIDE, 0x03000211 },
   { IDM_FILE_OPEN_OUTSIDE, 0x03000212 },
-  { IDM_FILE_VIEW, 0x03000220 },
+  // { IDM_FILE_VIEW, 0x03000220 }, // FIXME : does not exist !
   { IDM_FILE_EDIT, 0x03000221 },
   { IDM_RENAME, 0x03000230 },
   { IDM_COPY_TO, 0x03000231 },
@@ -69,7 +104,7 @@ static const CIDLangPair kIDLangPairs[] =
   { IDM_FILE_COMBINE, 0x03000271 },
   { IDM_CREATE_FOLDER, 0x03000250 },
   { IDM_CREATE_FILE, 0x03000251 },
-  { IDCLOSE, 0x03000260 },
+  // FIXME { IDCLOSE, 0x03000260 },
 
   // Edit
   { IDM_EDIT_CUT, 0x03000320 },
@@ -112,10 +147,14 @@ static const CIDLangPair kIDLangPairs[] =
   { IDM_BENCHMARK, 0x03000511 },
   
   { IDM_HELP_CONTENTS, 0x03000610 },
-  { IDM_ABOUT, 0x03000620 }
+  { IDM_ABOUT, 0x03000620 },
+
+  { 12111         , 0x03000710 }, // FIXME kAddToFavoritesLangID
+  { 12112         , 0x03000451 } // FIXME kToolbarsLangID
 };
 
 
+#ifdef _WIN32
 static int FindLangItem(int ControlID)
 {
   for (int i = 0; i < sizeof(kIDLangPairs) / sizeof(kIDLangPairs[0]); i++)
@@ -123,19 +162,8 @@ static int FindLangItem(int ControlID)
       return i;
   return -1;
 }
+#endif
 
-static int GetSortControlID(PROPID propID)
-{
-  switch(propID)
-  {
-    case kpidName: return IDM_VIEW_ARANGE_BY_NAME;
-    case kpidExtension: return IDM_VIEW_ARANGE_BY_TYPE;
-    case kpidMTime: return IDM_VIEW_ARANGE_BY_DATE;
-    case kpidSize: return IDM_VIEW_ARANGE_BY_SIZE;
-    case kpidNoProperty: return IDM_VIEW_ARANGE_NO_SORT;
-  }
-  return -1;
-}
 
 /*
 static bool g_IsNew_fMask = true;
@@ -148,9 +176,9 @@ public:
     g_IsNew_fMask = false;
     OSVERSIONINFO vi;
     vi.dwOSVersionInfoSize = sizeof(vi);
-    if (::GetVersionEx(&vi))
+    if (::GetVersionEx(&vi)) 
     {
-      g_IsNew_fMask = (vi.dwMajorVersion > 4 ||
+      g_IsNew_fMask = (vi.dwMajorVersion > 4 || 
         (vi.dwMajorVersion == 4 && vi.dwMinorVersion > 0));
     }
     g_IsNew_fMask = false;
@@ -177,71 +205,103 @@ static UINT Get_fMaskForFTypeAndString()
 }
 */
 
-static inline UINT Get_fMaskForString() { return MIIM_TYPE; }
-static inline UINT Get_fMaskForFTypeAndString() { return MIIM_TYPE; }
-
-static void MyChangeMenu(HMENU menuLoc, int level, int menuIndex)
+#ifdef _WIN32
+static UINT Get_fMaskForString()
 {
-  CMenu menu;
-  menu.Attach(menuLoc);
-  for (int i = 0;; i++)
-  {
-    CMenuItem item;
-    item.fMask = Get_fMaskForString() | MIIM_SUBMENU | MIIM_ID;
-    item.fType = MFT_STRING;
-    if (!menu.GetItem(i, true, item))
-      break;
-    {
-      UString newString;
-      if (item.hSubMenu)
-      {
-        UInt32 langID = 0;
-        if (level == 1 && menuIndex == kMenuIndex_Bookmarks)
-          langID = kAddToFavoritesLangID;
-        else
-        {
-          MyChangeMenu(item.hSubMenu, level + 1, i);
-          if (level == 1 && menuIndex == kMenuIndex_View)
-            langID = kToolbarsLangID;
-          else if (level == 0 && i < sizeof(kTopMenuLangIDs) / sizeof(kTopMenuLangIDs[0]))
-            langID = kTopMenuLangIDs[i];
-          else
-            continue;
-        }
-        newString = LangString(langID);
+  return MIIM_TYPE;
+}
+
+static UINT Get_fMaskForFTypeAndString()
+{
+  return MIIM_TYPE;
+}
+#endif
+
+
+static void MyChangeItem(wxMenuItem * mi,int LangID)
+{
+        UString newString = LangString(LangID);
         if (newString.IsEmpty())
-          continue;
-      }
-      else
-      {
-        int langPos = FindLangItem(item.wID);
-        if (langPos < 0)
-          continue;
-        newString = LangString(kIDLangPairs[langPos].LangID);
-        if (newString.IsEmpty())
-          continue;
-        UString shorcutString = item.StringValue;
+          return;
+	wxString ss = mi->GetItemLabel();
+        UString shorcutString((const wchar_t *)ss); //  = item.StringValue;
         int tabPos = shorcutString.ReverseFind(wchar_t('\t'));
         if (tabPos >= 0)
           newString += shorcutString.Mid(tabPos);
-      }
-      {
-        item.StringValue = newString;
-        item.fMask = Get_fMaskForString();
-        item.fType = MFT_STRING;
-        menu.SetItem(i, true, item);
-      }
-    }
+	// printf("Change Menu : %ls => %ls\n",(const wchar_t *)ss,(const wchar_t *)newString);
+	mi->SetItemLabel((const wchar_t *)newString);
+
+}
+
+static void MyChangeMenu(HMENU menuLoc, int level, int menuIndex)
+{
+  // Sets the label of the top-level menus
+  for (int i1= 0; i1< sizeof(kStringLangPairs) / sizeof(kStringLangPairs[0]); i1++)
+  {
+       	UString newString = LangString(kStringLangPairs[i1].LangID);
+       	if (! newString.IsEmpty()) menuLoc->SetMenuLabel(i1, (const TCHAR *)newString);
+  }
+
+  // sub-menu items
+  for (int i = 0; i < sizeof(kIDLangPairs) / sizeof(kIDLangPairs[0]); i++)
+  {
+	wxMenuItem * mi = menuLoc->FindItem(kIDLangPairs[i].ControlID);
+	if (mi)
+	{
+		MyChangeItem(mi,kIDLangPairs[i].LangID);
+	}
+//	else
+//	  printf("Change Menu : id=%d index=%d<>\n",kIDLangPairs[i].ControlID,i);
   }
 }
 
-static CMenu g_FileMenu;
+#ifdef _WIN32
+CMenu g_FileMenu;
 
-struct CFileMenuDestroyer
+class CFileMenuDestroyer
 {
-  ~CFileMenuDestroyer() { if ((HMENU)g_FileMenu != 0) g_FileMenu.Destroy(); }
+public:
+  ~CFileMenuDestroyer()
+  {
+    if ((HMENU)g_FileMenu != 0)
+      g_FileMenu.Destroy();
+  }
 } g_FileMenuDestroyer;
+#endif
 
+
+void MyLoadMenu(HWND hWnd)
+{
+#ifdef _WIN32
+  if ((HMENU)g_FileMenu != 0)
+    g_FileMenu.Destroy();
+  HMENU oldMenu = ::GetMenu(hWnd);
+  HMENU baseMenu = ::LoadMenu(g_hInstance, MAKEINTRESOURCE(IDM_MENU));
+  ::SetMenu(hWnd, baseMenu);
+  ::DestroyMenu(oldMenu);
+  if (!g_LangID.IsEmpty())
+  {
+    HMENU menuOld = ::GetMenu(hWnd);
+    MyChangeMenu(menuOld, 0, 0);
+  }
+  ::DrawMenuBar(hWnd);
+#else
+  extern void rc_MyLoadMenu(HWND hWnd);
+  rc_MyLoadMenu(hWnd);
+  if (!g_LangID.IsEmpty())
+  {
+    HMENU menuOld = ((wxFrame *)hWnd)->GetMenuBar(); // ::GetMenu(hWnd);
+    MyChangeMenu(menuOld, 0, 0);
+  }
+#endif
+}
+
+#ifdef _WIN32
+extern HWND g_HWND;
+void MyLoadMenu()
+{
+  MyLoadMenu(g_HWND);
+}
 
 static void CopyMenu(HMENU srcMenuSpec, HMENU destMenuSpec)
 {
@@ -250,74 +310,39 @@ static void CopyMenu(HMENU srcMenuSpec, HMENU destMenuSpec)
   CMenu destMenu;
   destMenu.Attach(destMenuSpec);
   int startPos = 0;
-  for (int i = 0;; i++)
+  for (int i = 0; i < srcMenu.GetItemCount(); i++)
   {
     CMenuItem item;
     item.fMask = MIIM_STATE | MIIM_ID | Get_fMaskForFTypeAndString();
     item.fType = MFT_STRING;
     if (srcMenu.GetItem(i, true, item))
-    {
       if (destMenu.InsertItem(startPos, true, item))
         startPos++;
-    }
-    else
-      break;
   }
-}
-
-void MyLoadMenu()
-{
-  HMENU baseMenu;
-
-  #ifdef UNDER_CE
-
-  HMENU oldMenu = g_App._commandBar.GetMenu(0);
-  if (oldMenu)
-    ::DestroyMenu(oldMenu);
-  BOOL b = g_App._commandBar.InsertMenubar(g_hInstance, IDM_MENU, 0);
-  baseMenu = g_App._commandBar.GetMenu(0);
-  if (!g_LangID.IsEmpty())
-    MyChangeMenu(baseMenu, 0, 0);
-  g_App._commandBar.DrawMenuBar(0);
- 
-  #else
-
-  HWND hWnd = g_HWND;
-  HMENU oldMenu = ::GetMenu(hWnd);
-  ::SetMenu(hWnd, ::LoadMenu(g_hInstance, MAKEINTRESOURCE(IDM_MENU)));
-  ::DestroyMenu(oldMenu);
-  baseMenu = ::GetMenu(hWnd);
-  if (!g_LangID.IsEmpty())
-    MyChangeMenu(baseMenu, 0, 0);
-  ::DrawMenuBar(hWnd);
-
-  #endif
-
-  if ((HMENU)g_FileMenu != 0)
-    g_FileMenu.Destroy();
-  g_FileMenu.CreatePopup();
-  CopyMenu(::GetSubMenu(baseMenu, 0), g_FileMenu);
 }
 
 void OnMenuActivating(HWND /* hWnd */, HMENU hMenu, int position)
 {
-  HMENU mainMenu =
-    #ifdef UNDER_CE
-    g_App._commandBar.GetMenu(0);
-    #else
-    ::GetMenu(g_HWND)
-    #endif
-    ;
-  if (::GetSubMenu(mainMenu, position) != hMenu)
+  if (::GetSubMenu(::GetMenu(g_HWND), position) != hMenu)
     return;
-  if (position == kMenuIndex_File)
+  if (position == kFileMenuIndex)
   {
+    if ((HMENU)g_FileMenu == 0)
+    {
+      g_FileMenu.CreatePopup();
+      CopyMenu(hMenu, g_FileMenu);
+    }
     CMenu menu;
     menu.Attach(hMenu);
-    menu.RemoveAllItems();
+    while (menu.GetItemCount() > 0)
+    {
+      if (!menu.RemoveItem(0, MF_BYPOSITION))
+        break;
+    }
+    // CopyMenu(g_FileMenu, hMenu);
     g_App.GetFocusedPanel().CreateFileMenu(hMenu);
   }
-  else if (position == kMenuIndex_Edit)
+  else if (position == kEditMenuIndex)
   {
     /*
     CMenu menu;
@@ -327,32 +352,35 @@ void OnMenuActivating(HWND /* hWnd */, HMENU hMenu, int position)
     menu.EnableItem(IDM_EDIT_PASTE, IsClipboardFormatAvailableHDROP() ? MF_ENABLED : MF_GRAYED);
     */
   }
-  else if (position == kMenuIndex_View)
+  else if (position == kViewMenuIndex)
   {
     // View;
     CMenu menu;
     menu.Attach(hMenu);
-    menu.CheckRadioItem(IDM_VIEW_LARGE_ICONS, IDM_VIEW_DETAILS,
+    menu.CheckRadioItem(IDM_VIEW_LARGE_ICONS, IDM_VIEW_DETAILS, 
       IDM_VIEW_LARGE_ICONS + g_App.GetListViewMode(), MF_BYCOMMAND);
-
-    menu.CheckRadioItem(IDM_VIEW_ARANGE_BY_NAME, IDM_VIEW_ARANGE_NO_SORT,
-        GetSortControlID(g_App.GetSortID()), MF_BYCOMMAND);
-    
-    menu.CheckItemByID(IDM_VIEW_TWO_PANELS, g_App.NumPanels == 2);
-    menu.CheckItemByID(IDM_VIEW_FLAT_VIEW, g_App.GetFlatMode());
-    menu.CheckItemByID(IDM_VIEW_ARCHIVE_TOOLBAR, g_App.ShowArchiveToolbar);
-    menu.CheckItemByID(IDM_VIEW_STANDARD_TOOLBAR, g_App.ShowStandardToolbar);
-    menu.CheckItemByID(IDM_VIEW_TOOLBARS_LARGE_BUTTONS, g_App.LargeButtons);
-    menu.CheckItemByID(IDM_VIEW_TOOLBARS_SHOW_BUTTONS_TEXT, g_App.ShowButtonsLables);
+    menu.CheckItem(IDM_VIEW_TWO_PANELS, MF_BYCOMMAND |
+        ((g_App.NumPanels == 2) ? MF_CHECKED : MF_UNCHECKED));
+    menu.CheckItem(IDM_VIEW_FLAT_VIEW, MF_BYCOMMAND |
+        ((g_App.GetFlatMode()) ? MF_CHECKED : MF_UNCHECKED));
+    menu.CheckItem(IDM_VIEW_ARCHIVE_TOOLBAR, MF_BYCOMMAND |
+        (g_App.ShowArchiveToolbar ? MF_CHECKED : MF_UNCHECKED));
+    menu.CheckItem(IDM_VIEW_STANDARD_TOOLBAR, MF_BYCOMMAND |
+        (g_App.ShowStandardToolbar ? MF_CHECKED : MF_UNCHECKED));
+    menu.CheckItem(IDM_VIEW_TOOLBARS_LARGE_BUTTONS, MF_BYCOMMAND |
+        (g_App.LargeButtons ? MF_CHECKED : MF_UNCHECKED));
+    menu.CheckItem(IDM_VIEW_TOOLBARS_SHOW_BUTTONS_TEXT, MF_BYCOMMAND |
+        (g_App.ShowButtonsLables ? MF_CHECKED : MF_UNCHECKED));
   }
-  else if (position == kMenuIndex_Bookmarks)
+  else if (position == kBookmarksMenuIndex)
   {
     CMenu menu;
     menu.Attach(hMenu);
 
     CMenu subMenu;
     subMenu.Attach(menu.GetSubMenu(0));
-    subMenu.RemoveAllItems();
+    while (subMenu.GetItemCount() > 0)
+      subMenu.RemoveItem(subMenu.GetItemCount() - 1, MF_BYPOSITION);
     int i;
     for (i = 0; i < 10; i++)
     {
@@ -365,7 +393,8 @@ void OnMenuActivating(HWND /* hWnd */, HMENU hMenu, int position)
       subMenu.AppendItem(MF_STRING, kSetBookmarkMenuID + i, s);
     }
 
-    menu.RemoveAllItemsFrom(2);
+    while (menu.GetItemCount() > 2)
+      menu.RemoveItem(menu.GetItemCount() - 1, MF_BYPOSITION);
 
     for (i = 0; i < 10; i++)
     {
@@ -393,60 +422,84 @@ void OnMenuUnActivating(HWND hWnd, HMENU hMenu, int id)
 {
   if (::GetSubMenu(::GetMenu(g_HWND), 0) != hMenu)
     return;
+  // g_App.GetFocusedPanel()._contextMenu.Release();
+}
+
+void OnMenuUnActivating(HWND hWnd)
+{
 }
 */
 
-void LoadFileMenu(HMENU hMenu, int startPos, bool programMenu,
-    bool isFsFolder, int numItems, bool allAreFiles)
+
+void LoadFileMenu(HMENU hMenu, int startPos, bool /* forFileMode */, bool programMenu)
 {
+  {
+    CMenu srcMenu;
+    srcMenu.Attach(::GetSubMenu(::GetMenu(g_HWND), 0));
+    if ((HMENU)g_FileMenu == 0)
+    {
+      g_FileMenu.CreatePopup();
+      CopyMenu(srcMenu, g_FileMenu);
+    }
+  }
+
   CMenu destMenu;
   destMenu.Attach(hMenu);
-
-  UString diffPath;
-  ReadRegDiff(diffPath);
   
-  int numRealItems = startPos;
-  for (int i = 0;; i++)
+  for (int i = 0; i < g_FileMenu.GetItemCount(); i++)
   {
     CMenuItem item;
 
     item.fMask = MIIM_STATE | MIIM_ID | Get_fMaskForFTypeAndString();
     item.fType = MFT_STRING;
-    if (!g_FileMenu.GetItem(i, true, item))
-      break;
+    if (g_FileMenu.GetItem(i, true, item))
     {
-      if (!programMenu && item.wID == IDCLOSE)
-        continue;
-
-      if (item.wID == IDM_FILE_DIFF && diffPath.IsEmpty())
-        continue;
-
-      bool isOneFsFile = (isFsFolder && numItems == 1 && allAreFiles);
-      bool disable = ((item.wID == IDM_FILE_SPLIT || item.wID == IDM_FILE_COMBINE) && !isOneFsFile);
-
-      bool isBigScreen = NControl::IsDialogSizeOK(40, 200);
-
-      if (!isBigScreen && (disable || item.IsSeparator()))
-        continue;
+      if (!programMenu)
+        if (item.wID == IDCLOSE)
+          continue;
+      /*
+      bool createItem = (item.wID == IDM_CREATE_FOLDER || item.wID == IDM_CREATE_FILE);
+      if (forFileMode)
+      {
+        if (createItem)
+         continue;
+      }
+      else
+      {
+        if (!createItem)
+         continue;
+      }
+      */
       if (destMenu.InsertItem(startPos, true, item))
         startPos++;
-      if (disable)
-        destMenu.EnableItem(startPos - 1, MF_BYPOSITION | MF_GRAYED);
-
-      if (!item.IsSeparator())
-        numRealItems = startPos;
     }
   }
-  destMenu.RemoveAllItemsFrom(numRealItems);
+  while (destMenu.GetItemCount() > 0)
+  {
+    CMenuItem item;
+    item.fMask = MIIM_TYPE;
+    item.fType = 0;
+    // item.dwTypeData = 0;
+    int lastIndex = destMenu.GetItemCount() - 1;
+    if (!destMenu.GetItem(lastIndex, true, item))
+      break;
+    if(item.fType != MFT_SEPARATOR)
+      break;
+    if (!destMenu.RemoveItem(lastIndex, MF_BYPOSITION))
+      break;
+  }
 }
+#endif
 
 bool ExecuteFileCommand(int id)
 {
   if (id >= kPluginMenuStartID)
   {
+#ifdef _WIN32
     g_App.GetFocusedPanel().InvokePluginCommand(id);
     g_App.GetFocusedPanel()._sevenZipContextMenu.Release();
     g_App.GetFocusedPanel()._systemContextMenu.Release();
+#endif
     return true;
   }
 
@@ -478,8 +531,12 @@ bool ExecuteFileCommand(int id)
       break;
     case IDM_DELETE:
     {
+#ifdef _WIN32 // FIXME
       bool shift = (::GetKeyState(VK_SHIFT) & 0x8000) != 0;
       g_App.Delete(!shift);
+#else
+      g_App.Delete(true);
+#endif
       break;
     }
     case IDM_FILE_CRC:
@@ -509,21 +566,47 @@ bool ExecuteFileCommand(int id)
       break;
     default:
       return false;
-  }
+  } 
   return true;
+}
+
+void createAboutDialog(void)
+{
+    wxAboutDialogInfo info;
+
+    UString msg;
+  
+    msg = LangString(0x01000103); // IDC_ABOUT_STATIC_REGISTER_INFO
+    if (msg == L"") msg = L"7-Zip is free software. However, you can support development of 7-Zip by registering.";
+    info.SetDescription((const wchar_t *)msg);
+    
+
+    info.SetName(_("P7ZIP"));
+    info.SetVersion(wxString(MY_7ZIP_VERSION, wxConvUTF8));
+    info.SetCopyright(wxString(MY_COPYRIGHT, wxConvUTF8));
+    info.SetWebSite(_T("www.7-zip.org"));
+
+    wxAboutBox(info);
 }
 
 bool OnMenuCommand(HWND hWnd, int id)
 {
+  printf("DEBUG : OnMenuCommand(%p,id=%d)-0\n",hWnd,id);
+
   if (ExecuteFileCommand(id))
     return true;
+
+  printf("DEBUG : OnMenuCommand(%p,id=%d)-1\n",hWnd,id);
 
   switch (id)
   {
     // File
     case IDCLOSE:
+    /* FIXME
       SendMessage(hWnd, WM_ACTIVATE, MAKEWPARAM(WA_INACTIVE, 0), (LPARAM)hWnd);
       SendMessage (hWnd, WM_CLOSE, 0, 0);
+    */
+      hWnd->Close(true);
       break;
     
     // Edit
@@ -577,8 +660,8 @@ bool OnMenuCommand(HWND hWnd, int id)
         g_App.SetListViewMode(index);
         /*
         CMenu menu;
-        menu.Attach(::GetSubMenu(::GetMenu(hWnd), kMenuIndex_View));
-        menu.CheckRadioItem(IDM_VIEW_LARGE_ICONS, IDM_VIEW_DETAILS,
+        menu.Attach(::GetSubMenu(::GetMenu(hWnd), kViewMenuIndex));
+        menu.CheckRadioItem(IDM_VIEW_LARGE_ICONS, IDM_VIEW_DETAILS, 
             id, MF_BYCOMMAND);
         */
       }
@@ -643,24 +726,23 @@ bool OnMenuCommand(HWND hWnd, int id)
 
     // Tools
     case IDM_OPTIONS:
-      OptionsDialog(hWnd, g_hInstance);
+      // FIXME OptionsDialog(hWnd, g_hInstance);
       break;
           
     case IDM_BENCHMARK:
-    {
-      CPanel::CDisableTimerProcessing disableTimerProcessing1(g_App.Panels[0]);
-      CPanel::CDisableTimerProcessing disableTimerProcessing2(g_App.Panels[1]);
       Benchmark();
       break;
-    }
     // Help
     case IDM_HELP_CONTENTS:
       ShowHelpWindow(NULL, kFMHelpTopic);
       break;
     case IDM_ABOUT:
     {
+	    /* FIXME
       CAboutDialog dialog;
       dialog.Create(hWnd);
+      */
+      createAboutDialog();
       break;
     }
     default:
@@ -680,3 +762,4 @@ bool OnMenuCommand(HWND hWnd, int id)
   }
   return true;
 }
+

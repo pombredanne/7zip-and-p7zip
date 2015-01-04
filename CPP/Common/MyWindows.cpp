@@ -6,13 +6,13 @@
 
 #include "MyWindows.h"
 #include "Types.h"
-#include <malloc.h>
+#include <stdlib.h> /* FIXED <malloc.h> */
 
 static inline void *AllocateForBSTR(size_t cb) { return ::malloc(cb); }
 static inline void FreeForBSTR(void *pv) { ::free(pv);}
 
 static UINT MyStringLen(const wchar_t *s)
-{
+{ 
   UINT i;
   for (i = 0; s[i] != '\0'; i++);
   return i;
@@ -20,17 +20,19 @@ static UINT MyStringLen(const wchar_t *s)
 
 BSTR SysAllocStringByteLen(LPCSTR psz, UINT len)
 {
-  int realLen = len + sizeof(UINT) + sizeof(OLECHAR) + sizeof(OLECHAR);
+  // FIXED int realLen = len + sizeof(UINT) + 3;
+  const int LEN_ADDON = sizeof(wchar_t) - 1;
+  int realLen = len + sizeof(UINT) + sizeof(wchar_t) + LEN_ADDON;
   void *p = AllocateForBSTR(realLen);
   if (p == 0)
     return 0;
   *(UINT *)p = len;
-  BSTR bstr = (BSTR)((UINT *)p + 1);
-  memmove(bstr, psz, len);
-  Byte *pb = ((Byte *)bstr) + len;
-  for (int i = 0; i < sizeof(OLECHAR) * 2; i++)
-    pb[i] = 0;
-  return bstr;
+  // "void *" instead of "BSTR" to avoid unaligned copy of "wchar_t" because of optimizer on Solaris
+  void * bstr = (void *)((UINT *)p + 1);
+  if (psz) memmove(bstr, psz, len); // psz does not always have "wchar_t" alignment.
+  void *pb = (void *)(((Byte *)bstr) + len);
+  memset(pb,0,sizeof(wchar_t) + LEN_ADDON);
+  return (BSTR)bstr;
 }
 
 BSTR SysAllocString(const OLECHAR *sz)
@@ -42,10 +44,10 @@ BSTR SysAllocString(const OLECHAR *sz)
   void *p = AllocateForBSTR(len + sizeof(UINT));
   if (p == 0)
     return 0;
-  *(UINT *)p = strLen;
-  BSTR bstr = (BSTR)((UINT *)p + 1);
-  memmove(bstr, sz, len);
-  return bstr;
+  *(UINT *)p = strLen * sizeof(OLECHAR); // FIXED
+  void * bstr = (void *)((UINT *)p + 1);
+  memmove(bstr, sz, len); // sz does not always have "wchar_t" alignment.
+  return (BSTR)bstr;
 }
 
 void SysFreeString(BSTR bstr)
@@ -59,6 +61,7 @@ UINT SysStringByteLen(BSTR bstr)
   if (bstr == 0)
     return 0;
   return *((UINT *)bstr - 1);
+
 }
 
 UINT SysStringLen(BSTR bstr)
@@ -81,7 +84,7 @@ HRESULT VariantCopy(VARIANTARG *dest, VARIANTARG *src)
     return res;
   if (src->vt == VT_BSTR)
   {
-    dest->bstrVal = SysAllocStringByteLen((LPCSTR)src->bstrVal,
+    dest->bstrVal = SysAllocStringByteLen((LPCSTR)src->bstrVal, 
         SysStringByteLen(src->bstrVal));
     if (dest->bstrVal == 0)
       return E_OUTOFMEMORY;
@@ -94,15 +97,14 @@ HRESULT VariantCopy(VARIANTARG *dest, VARIANTARG *src)
 
 LONG CompareFileTime(const FILETIME* ft1, const FILETIME* ft2)
 {
-  if (ft1->dwHighDateTime < ft2->dwHighDateTime) return -1;
-  if (ft1->dwHighDateTime > ft2->dwHighDateTime) return 1;
-  if (ft1->dwLowDateTime < ft2->dwLowDateTime) return -1;
-  if (ft1->dwLowDateTime > ft2->dwLowDateTime) return 1;
-  return 0;
-}
-
-DWORD GetLastError()
-{
+  if(ft1->dwHighDateTime < ft2->dwHighDateTime)
+    return -1;
+  if(ft1->dwHighDateTime > ft2->dwHighDateTime)
+    return 1;
+  if(ft1->dwLowDateTime < ft2->dwLowDateTime)
+    return -1;
+  if(ft1->dwLowDateTime > ft2->dwLowDateTime)
+    return 1;
   return 0;
 }
 

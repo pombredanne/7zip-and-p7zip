@@ -88,7 +88,7 @@ bool GetTextConfig(const AString &string, CObjectVector<CTextConfigPair> &pairs)
       char c = string[pos++];
       if (c == '\"')
         break;
-      if (c == '\\')
+      if (c == '\\') // FIXME ?
       {
         char c = string[pos++];
         switch(c)
@@ -99,14 +99,14 @@ bool GetTextConfig(const AString &string, CObjectVector<CTextConfigPair> &pairs)
           case 't':
             message += '\t';
             break;
-          case '\\':
+          case '\\': // FIXME ?
             message += '\\';
             break;
           case '\"':
             message += '\"';
             break;
           default:
-            message += '\\';
+            message += '\\'; // FIXME ?
             message += c;
             break;
         }
