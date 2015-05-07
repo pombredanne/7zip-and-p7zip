@@ -1,192 +1,154 @@
-PROG=../../../../bin/7zr$(BINSUFFIX)
+PROG = 7zr.exe
+MY_CONSOLE = 1
+CFLAGS = $(CFLAGS) -DPROG_VARIANT_R
 
-LOCAL_FLAGS= \
-  -D_NO_CRYPTO \
-  -D_NO_CRYPTO \
-  -DBREAK_HANDLER \
-  -DUNICODE -D_UNICODE
+!IFNDEF UNDER_CE
+CFLAGS = $(CFLAGS) -DWIN_LONG_PATH
+!ENDIF
 
-include ../../../../makefile.crc32
-include ../../../../makefile.machine
-
-PCH_NAME=$(PRE_COMPILED_HEADER)
-
-LIBS=$(LOCAL_LIBS)
-
-CONSOLE_OBJS = \
-  BenchCon.o \
-  ConsoleClose.o \
-  ExtractCallbackConsole.o \
-  List.o \
-  Main.o \
-  MainAr.o \
-  OpenCallbackConsole.o \
-  PercentPrinter.o \
-  UpdateCallbackConsole.o \
-  UserInputUtils.o \
-
-# NewHandler.o StringConvert.o
 COMMON_OBJS = \
-  CommandLineParser.o \
-  CRC.o \
-  IntToString.o \
-  ListFileUtils.o \
-  StdInStream.o \
-  StdOutStream.o \
-  MyString.o \
-  MyWindows.o \
-  StringConvert.o \
-  StringToInt.o \
-  UTFConvert.o \
-  MyVector.o \
-  Wildcard.o \
+  $O\CommandLineParser.obj \
+  $O\CRC.obj \
+  $O\CrcReg.obj \
+  $O\IntToString.obj \
+  $O\ListFileUtils.obj \
+  $O\NewHandler.obj \
+  $O\StdInStream.obj \
+  $O\StdOutStream.obj \
+  $O\MyString.obj \
+  $O\Sha256Reg.obj \
+  $O\StringConvert.obj \
+  $O\StringToInt.obj \
+  $O\UTFConvert.obj \
+  $O\MyVector.obj \
+  $O\Wildcard.obj \
+  $O\XzCrc64Reg.obj \
 
-# DLL.o MemoryLock.o
 WIN_OBJS = \
-  Error.o \
-  FileDir.o \
-  FileFind.o \
-  FileIO.o \
-  FileName.o \
-  PropVariant.o \
-  PropVariantConversions.o \
-  Synchronization.o \
-  System.o \
-  Time.o \
+  $O\DLL.obj \
+  $O\ErrorMsg.obj \
+  $O\FileDir.obj \
+  $O\FileFind.obj \
+  $O\FileIO.obj \
+  $O\FileLink.obj \
+  $O\FileName.obj \
+  $O\MemoryLock.obj \
+  $O\PropVariant.obj \
+  $O\PropVariantConv.obj \
+  $O\Synchronization.obj \
+  $O\System.obj \
+  $O\TimeUtils.obj \
 
 7ZIP_COMMON_OBJS = \
-  CreateCoder.o \
-  CWrappers.o \
-  FilePathAutoRename.o \
-  FileStreams.o \
-  FilterCoder.o \
-  InBuffer.o \
-  InOutTempBuffer.o \
-  LimitedStreams.o \
-  LockedStream.o \
-  MethodId.o \
-  MethodProps.o \
-  OffsetStream.o \
-  OutBuffer.o \
-  ProgressUtils.o \
-  StreamBinder.o \
-  StreamObjects.o \
-  StreamUtils.o \
-  VirtThread.o \
-
-# WorkDir.o
-UI_COMMON_OBJS = \
-  ArchiveCommandLine.o \
-  ArchiveExtractCallback.o \
-  ArchiveOpenCallback.o \
-  Bench.o \
-  DefaultName.o \
-  EnumDirItems.o \
-  Extract.o \
-  ExtractingFilePath.o \
-  LoadCodecs.o \
-  OpenArchive.o \
-  PropIDUtils.o \
-  SetProperties.o \
-  SortUtils.o \
-  TempFiles.o \
-  Update.o \
-  UpdateAction.o \
-  UpdateCallback.o \
-  UpdatePair.o \
-  UpdateProduce.o \
+  $O\CreateCoder.obj \
+  $O\CWrappers.obj \
+  $O\FilePathAutoRename.obj \
+  $O\FileStreams.obj \
+  $O\InBuffer.obj \
+  $O\InOutTempBuffer.obj \
+  $O\FilterCoder.obj \
+  $O\LimitedStreams.obj \
+  $O\LockedStream.obj \
+  $O\MethodId.obj \
+  $O\MethodProps.obj \
+  $O\OffsetStream.obj \
+  $O\OutBuffer.obj \
+  $O\ProgressUtils.obj \
+  $O\PropId.obj \
+  $O\StreamBinder.obj \
+  $O\StreamObjects.obj \
+  $O\StreamUtils.obj \
+  $O\UniqBlocks.obj \
+  $O\VirtThread.obj \
 
 AR_OBJS = \
-  LzmaHandler.o \
-  SplitHandler.o \
-  XzHandler.o \
+  $O\LzmaHandler.obj \
+  $O\SplitHandler.obj \
+  $O\XzHandler.obj \
 
 AR_COMMON_OBJS = \
-  CoderMixer2.o \
-  CoderMixer2MT.o \
-  CrossThreadProgress.o \
-  DummyOutStream.o \
-  HandlerOut.o \
-  InStreamWithCRC.o \
-  ItemNameUtils.o \
-  MultiStream.o \
-  OutStreamWithCRC.o \
-  ParseProperties.o \
+  $O\CoderMixer2.obj \
+  $O\CoderMixer2MT.obj \
+  $O\CrossThreadProgress.obj \
+  $O\DummyOutStream.obj \
+  $O\HandlerOut.obj \
+  $O\InStreamWithCRC.obj \
+  $O\ItemNameUtils.obj \
+  $O\MultiStream.obj \
+  $O\OutStreamWithCRC.obj \
+  $O\ParseProperties.obj \
+
 
 7Z_OBJS = \
-  7zCompressionMode.o \
-  7zDecode.o \
-  7zEncode.o \
-  7zExtract.o \
-  7zFolderInStream.o \
-  7zFolderOutStream.o \
-  7zHandler.o \
-  7zHandlerOut.o \
-  7zHeader.o \
-  7zIn.o \
-  7zOut.o \
-  7zProperties.o \
-  7zRegister.o \
-  7zSpecStream.o \
-  7zUpdate.o \
+  $O\7zCompressionMode.obj \
+  $O\7zDecode.obj \
+  $O\7zEncode.obj \
+  $O\7zExtract.obj \
+  $O\7zFolderInStream.obj \
+  $O\7zFolderOutStream.obj \
+  $O\7zHandler.obj \
+  $O\7zHandlerOut.obj \
+  $O\7zHeader.obj \
+  $O\7zIn.obj \
+  $O\7zOut.obj \
+  $O\7zProperties.obj \
+  $O\7zRegister.obj \
+  $O\7zSpecStream.obj \
+  $O\7zUpdate.obj \
 
 COMPRESS_OBJS = \
-  Bcj2Coder.o \
-  Bcj2Register.o \
-  BcjCoder.o \
-  BcjRegister.o \
-  BranchCoder.o \
-  BranchMisc.o \
-  BranchRegister.o \
-  ByteSwap.o \
-  CopyCoder.o \
-  CopyRegister.o \
-  DeltaFilter.o \
-  Lzma2Decoder.o \
-  Lzma2Encoder.o \
-  Lzma2Register.o \
-  LzmaDecoder.o \
-  LzmaEncoder.o \
-  LzmaRegister.o \
+  $O\Bcj2Coder.obj \
+  $O\Bcj2Register.obj \
+  $O\BcjCoder.obj \
+  $O\BcjRegister.obj \
+  $O\BranchCoder.obj \
+  $O\BranchMisc.obj \
+  $O\BranchRegister.obj \
+  $O\ByteSwap.obj \
+  $O\CopyCoder.obj \
+  $O\CopyRegister.obj \
+  $O\DeltaFilter.obj \
+  $O\Lzma2Decoder.obj \
+  $O\Lzma2Encoder.obj \
+  $O\Lzma2Register.obj \
+  $O\LzmaDecoder.obj \
+  $O\LzmaEncoder.obj \
+  $O\LzmaRegister.obj \
+
+CRYPTO_OBJS = \
+  $O\7zAes.obj \
+  $O\7zAesRegister.obj \
+  $O\MyAes.obj \
+  $O\MyAesReg.obj \
+  $O\RandGen.obj \
 
 C_OBJS = \
-  7zStream.o \
-  Alloc.o \
-  Bra.o \
-  Bra86.o \
-  BraIA64.o \
-  Delta.o \
-  LzFind.o \
-  LzFindMt.o \
-  Lzma2Dec.o \
-  Lzma2Enc.o \
-  LzmaDec.o \
-  LzmaEnc.o \
-  MtCoder.o \
-  Sha256.o \
-  Threads.o \
-  Xz.o \
-  XzCrc64.o \
-  XzDec.o \
-  XzEnc.o \
-  XzIn.o \
+  $O\7zStream.obj \
+  $O\Alloc.obj \
+  $O\Bra.obj \
+  $O\Bra86.obj \
+  $O\BraIA64.obj \
+  $O\CpuArch.obj \
+  $O\Delta.obj \
+  $O\LzFind.obj \
+  $O\LzFindMt.obj \
+  $O\Lzma2Dec.obj \
+  $O\Lzma2Enc.obj \
+  $O\LzmaDec.obj \
+  $O\LzmaEnc.obj \
+  $O\MtCoder.obj \
+  $O\Sha256.obj \
+  $O\Sort.obj \
+  $O\Threads.obj \
+  $O\Xz.obj \
+  $O\XzDec.obj \
+  $O\XzEnc.obj \
+  $O\XzIn.obj \
 
+!include "../../UI/Console/Console.mak"
 
-OBJS = \
-  wine_date_and_time.o \
-  myAddExeFlag.o \
-  mySplitCommandLine.o \
-  $(CONSOLE_OBJS) \
-  $(COMMON_OBJS) \
-  $(WIN_OBJS) \
-  $(7ZIP_COMMON_OBJS) \
-  $(UI_COMMON_OBJS) \
-  $(AR_OBJS) \
-  $(AR_COMMON_OBJS) \
-  $(7Z_OBJS) \
-  $(COMPRESS_OBJS) \
-  $(C_OBJS) \
-  $(OBJ_CRC32) \
+!include "../../Aes.mak"
+!include "../../Crc.mak"
+!include "../../Crc64.mak"
 
-include ../../../../makefile.glb
-
+!include "../../7zip.mak"

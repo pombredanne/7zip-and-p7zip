@@ -6,11 +6,13 @@
 #include <winuserm.h>
 #endif
 
-#include "Common/StringConvert.h"
+#include "../../../Common/StringConvert.h"
+#include "../../../Common/Wildcard.h"
 
-#include "Windows/Memory.h"
-#include "Windows/FileDir.h"
-#include "Windows/Shell.h"
+#include "../../../Windows/MemoryGlobal.h"
+#include "../../../Windows/FileDir.h"
+#include "../../../Windows/FileName.h"
+#include "../../../Windows/Shell.h"
 
 #include "../Common/ArchiveName.h"
 #include "../Common/CompressCall.h"
@@ -21,12 +23,14 @@
 #include "EnumFormatEtc.h"
 
 using namespace NWindows;
+using namespace NFile;
+using namespace NDir;
 
 #ifndef _UNICODE
 extern bool g_IsNT;
 #endif
 
-static wchar_t *kTempDirPrefix = L"7zE";
+static CFSTR kTempDirPrefix = FTEXT("7zE");
 static LPCTSTR kSvenZipSetFolderFormat = TEXT("7-Zip::SetTargetFolder");
 
 ////////////////////////////////////////////////////////
@@ -203,10 +207,9 @@ STDMETHODIMP CDropSource::QueryContinueDrag(BOOL escapePressed, DWORD keyState)
     }
     if (needExtract)
     {
-      Result = Panel->CopyTo(Indices, Folder,
-          false, // moveMode,
-          false, // showMessages
-          &Messages);
+      CCopyToOptions options;
+      options.folder = Folder;
+      Result = Panel->CopyTo(options, Indices, &Messages);
       if (Result != S_OK || !Messages.IsEmpty())
         return DRAGDROP_S_CANCEL;
     }
@@ -223,19 +226,19 @@ STDMETHODIMP CDropSource::GiveFeedback(DWORD effect)
 
 static bool CopyNamesToHGlobal(NMemory::CGlobal &hgDrop, const UStringVector &names)
 {
-  size_t totalLength = 1;
+  size_t totalLen = 1;
 
   #ifndef _UNICODE
   if (!g_IsNT)
   {
     AStringVector namesA;
-    int i;
+    unsigned i;
     for (i = 0; i < names.Size(); i++)
       namesA.Add(GetSystemString(names[i]));
     for (i = 0; i < names.Size(); i++)
-      totalLength += namesA[i].Length() + 1;
+      totalLen += namesA[i].Len() + 1;
     
-    if (!hgDrop.Alloc(GHND | GMEM_SHARE, totalLength * sizeof(CHAR) + sizeof(DROPFILES)))
+    if (!hgDrop.Alloc(GHND | GMEM_SHARE, totalLen * sizeof(CHAR) + sizeof(DROPFILES)))
       return false;
     
     NMemory::CGlobalLock dropLock(hgDrop);
@@ -251,21 +254,21 @@ static bool CopyNamesToHGlobal(NMemory::CGlobal &hgDrop, const UStringVector &na
     for (i = 0; i < names.Size(); i++)
     {
       const AString &s = namesA[i];
-      int fullLength = s.Length() + 1;
+      unsigned fullLen = s.Len() + 1;
       MyStringCopy(p, (const char *)s);
-      p += fullLength;
-      totalLength -= fullLength;
+      p += fullLen;
+      totalLen -= fullLen;
     }
     *p = 0;
   }
   else
   #endif
   {
-    int i;
+    unsigned i;
     for (i = 0; i < names.Size(); i++)
-      totalLength += names[i].Length() + 1;
+      totalLen += names[i].Len() + 1;
     
-    if (!hgDrop.Alloc(GHND | GMEM_SHARE, totalLength * sizeof(WCHAR) + sizeof(DROPFILES)))
+    if (!hgDrop.Alloc(GHND | GMEM_SHARE, totalLen * sizeof(WCHAR) + sizeof(DROPFILES)))
       return false;
     
     NMemory::CGlobalLock dropLock(hgDrop);
@@ -281,10 +284,10 @@ static bool CopyNamesToHGlobal(NMemory::CGlobal &hgDrop, const UStringVector &na
     for (i = 0; i < names.Size(); i++)
     {
       const UString &s = names[i];
-      int fullLength = s.Length() + 1;
+      unsigned fullLen = s.Len() + 1;
       MyStringCopy(p, (const WCHAR *)s);
-      p += fullLength;
-      totalLength -= fullLength;
+      p += fullLen;
+      totalLen -= fullLen;
     }
     *p = 0;
   }
@@ -293,7 +296,7 @@ static bool CopyNamesToHGlobal(NMemory::CGlobal &hgDrop, const UStringVector &na
 
 void CPanel::OnDrag(LPNMLISTVIEW /* nmListView */)
 {
-  CPanel::CDisableTimerProcessing disableTimerProcessing2(*this);
+  CDisableTimerProcessing disableTimerProcessing2(*this);
   if (!DoesItSupportOperations())
     return;
   CRecordVector<UInt32> indices;
@@ -304,12 +307,12 @@ void CPanel::OnDrag(LPNMLISTVIEW /* nmListView */)
   // CSelectedState selState;
   // SaveSelectedState(selState);
 
-  UString dirPrefix;
-  NFile::NDirectory::CTempDirectoryW tempDirectory;
+  FString dirPrefix;
+  CTempDir tempDirectory;
 
   bool isFSFolder = IsFSFolder();
   if (isFSFolder)
-    dirPrefix = _currentFolderPrefix;
+    dirPrefix = us2fs(_currentFolderPrefix);
   else
   {
     tempDirectory.Create(kTempDirPrefix);
@@ -322,7 +325,7 @@ void CPanel::OnDrag(LPNMLISTVIEW /* nmListView */)
 
   {
     UStringVector names;
-    for (int i = 0; i < indices.Size(); i++)
+    FOR_VECTOR (i, indices)
     {
       UInt32 index = indices[i];
       UString s;
@@ -330,7 +333,7 @@ void CPanel::OnDrag(LPNMLISTVIEW /* nmListView */)
         s = GetItemRelPath(index);
       else
         s = GetItemName(index);
-      names.Add(dirPrefix + s);
+      names.Add(fs2us(dirPrefix) + s);
     }
     if (!CopyNamesToHGlobal(dataObjectSpec->hGlobal, names))
       return;
@@ -341,7 +344,7 @@ void CPanel::OnDrag(LPNMLISTVIEW /* nmListView */)
   dropSourceSpec->NeedExtract = !isFSFolder;
   dropSourceSpec->Panel = this;
   dropSourceSpec->Indices = indices;
-  dropSourceSpec->Folder = dirPrefix;
+  dropSourceSpec->Folder = fs2us(dirPrefix);
   dropSourceSpec->DataObjectSpec = dataObjectSpec;
   dropSourceSpec->DataObject = dataObjectSpec;
 
@@ -355,6 +358,7 @@ void CPanel::OnDrag(LPNMLISTVIEW /* nmListView */)
   HRESULT res = DoDragDrop(dataObject, dropSource, effectsOK, &effect);
   _panelCallback->DragEnd();
   bool canceled = (res == DRAGDROP_S_CANCEL);
+  CDisableNotify disableNotify(*this);
   if (res == DRAGDROP_S_DROP)
   {
     res = dropSourceSpec->Result;
@@ -362,10 +366,10 @@ void CPanel::OnDrag(LPNMLISTVIEW /* nmListView */)
       if (!dataObjectSpec->Path.IsEmpty())
       {
         NFile::NName::NormalizeDirPathPrefix(dataObjectSpec->Path);
-        res = CopyTo(indices, dataObjectSpec->Path,
-          (effect == DROPEFFECT_MOVE),// dropSourceSpec->MoveMode,
-          false, // showErrorMessages
-          &dropSourceSpec->Messages);
+        CCopyToOptions options;
+        options.folder = dataObjectSpec->Path;
+        options.moveMode = (effect == DROPEFFECT_MOVE);
+        res = CopyTo(options, indices, &dropSourceSpec->Messages);
       }
     /*
     if (effect == DROPEFFECT_MOVE)
@@ -385,8 +389,14 @@ void CPanel::OnDrag(LPNMLISTVIEW /* nmListView */)
     messagesDialog.Messages = &dropSourceSpec->Messages;
     messagesDialog.Create((*this));
   }
+  
   if (res != S_OK && res != E_ABORT)
+  {
+    // we restore Notify before MessageBoxError. So we will se files selection
+    disableNotify.Restore();
+    // SetFocusToList();
     MessageBoxError(res);
+  }
   if (res == S_OK && dropSourceSpec->Messages.IsEmpty() && !canceled)
     KillSelection();
 }
@@ -482,7 +492,7 @@ void CDropTarget::PositionCursor(POINTL ptl)
   int realIndex = m_Panel->GetRealItemIndex(index);
   if (realIndex == kParentIndex)
     return;
-  if (!m_Panel->IsItemFolder(realIndex))
+  if (!m_Panel->IsItem_Folder(realIndex))
     return;
   m_SubFolderIndex = realIndex;
   m_SubFolderName = m_Panel->GetItemName(m_SubFolderIndex);
@@ -584,10 +594,9 @@ bool CDropTarget::IsItSameDrive() const
 
   if (m_SourcePaths.Size() == 0)
     return false;
-  for (int i = 0; i < m_SourcePaths.Size(); i++)
+  FOR_VECTOR (i, m_SourcePaths)
   {
-    const UString &path = m_SourcePaths[i];
-    if (drive.CompareNoCase(path.Left(drive.Length())) != 0)
+    if (MyStringCompareNoCase_N(m_SourcePaths[i], drive, drive.Len()) != 0)
       return false;
   }
   return true;
@@ -648,7 +657,7 @@ bool CDropTarget::SetPath(bool enablePath) const
   UString path;
   if (enablePath)
     path = GetTargetPath();
-  size_t size = path.Length() + 1;
+  size_t size = path.Len() + 1;
   medium.hGlobal = GlobalAlloc(GHND | GMEM_SHARE, size * sizeof(wchar_t));
   if (medium.hGlobal == 0)
     return false;
@@ -748,25 +757,29 @@ void CPanel::CompressDropFiles(HDROP dr)
 }
 */
 
-static bool IsFolderInTemp(const UString &path)
+static bool IsFolderInTemp(const FString &path)
 {
-  UString tempPath;
-  if (!NFile::NDirectory::MyGetTempPath(tempPath))
+  FString tempPath;
+  if (!MyGetTempPath(tempPath))
     return false;
   if (tempPath.IsEmpty())
     return false;
-  return (tempPath.CompareNoCase(path.Left(tempPath.Length())) == 0);
+  unsigned len = tempPath.Len();
+  if (path.Len() < len)
+    return false;
+  return CompareFileNames(path.Left(len), tempPath) == 0;
 }
 
 static bool AreThereNamesFromTemp(const UStringVector &fileNames)
 {
-  UString tempPath;
-  if (!NFile::NDirectory::MyGetTempPath(tempPath))
+  FString tempPathF;
+  if (!MyGetTempPath(tempPathF))
     return false;
+  UString tempPath = fs2us(tempPathF);
   if (tempPath.IsEmpty())
     return false;
-  for (int i = 0; i < fileNames.Size(); i++)
-    if (tempPath.CompareNoCase(fileNames[i].Left(tempPath.Length())) == 0)
+  FOR_VECTOR (i, fileNames)
+    if (MyStringCompareNoCase_N(fileNames[i], tempPath, tempPath.Len()) == 0)
       return true;
   return false;
 }
@@ -784,12 +797,16 @@ void CPanel::CompressDropFiles(const UStringVector &fileNames, const UString &fo
     UString folderPath2 = folderPath;
     if (folderPath2.IsEmpty())
     {
-      NFile::NDirectory::GetOnlyDirPrefix(fileNames.Front(), folderPath2);
-      if (IsFolderInTemp(folderPath2))
+      FString folderPath2F;
+      GetOnlyDirPrefix(us2fs(fileNames.Front()), folderPath2F);
+      folderPath2 = fs2us(folderPath2F);
+      if (IsFolderInTemp(folderPath2F))
         folderPath2 = ROOT_FS_FOLDER;
     }
     const UString archiveName = CreateArchiveName(fileNames.Front(), (fileNames.Size() > 1), false);
-    CompressFiles(folderPath2, archiveName, L"", fileNames,
+    CompressFiles(folderPath2, archiveName, L"",
+      true, // addExtension
+      fileNames,
       false, // email
       true, // showDialog
       AreThereNamesFromTemp(fileNames) // waitFinish

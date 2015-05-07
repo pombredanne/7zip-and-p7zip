@@ -5,26 +5,25 @@
 
 #include "../Common/MyString.h"
 
-typedef void * HMODULE;
-
-typedef int (*FARPROC)();
-
 namespace NWindows {
 namespace NDLL {
 
+#ifdef UNDER_CE
+#define My_GetProcAddress(module, procName) ::GetProcAddressA(module, procName)
+#else
+#define My_GetProcAddress(module, procName) ::GetProcAddress(module, procName)
+#endif
+ 
 class CLibrary
 {
-  bool LoadOperations(HMODULE newModule);
   HMODULE _module;
 public:
+  CLibrary(): _module(NULL) {};
+  ~CLibrary() { Free(); }
+
   operator HMODULE() const { return _module; }
   HMODULE* operator&() { return &_module; }
-
-
-  CLibrary():_module(NULL) {};
-  ~CLibrary();
-
-  bool Free();
+  bool IsLoaded() const { return (_module != NULL); };
 
   void Attach(HMODULE m)
   {
@@ -38,10 +37,15 @@ public:
     return m;
   }
 
-
-  bool Load(LPCTSTR fileName);
-  FARPROC GetProc(LPCSTR procName) const;
+  bool Free() throw();
+  bool LoadEx(CFSTR path, DWORD flags = LOAD_LIBRARY_AS_DATAFILE) throw();
+  bool Load(CFSTR path) throw();
+  FARPROC GetProc(LPCSTR procName) const { return My_GetProcAddress(_module, procName); }
 };
+
+bool MyGetModuleFileName(FString &path);
+
+FString GetModuleDirPrefix();
 
 }}
 

@@ -1,154 +1,109 @@
-PROG=../../../../bin/7zFM$(BINSUFFIX)
+PROG = 7zFM.exe
+CFLAGS = $(CFLAGS) \
+  -DLANG \
+  -DNEW_FOLDER_INTERFACE \
+  -DEXTERNAL_CODECS \
 
-LOCAL_FLAGS=\
-	-DUNICODE -D_UNICODE \
-	-DLANG \
-	-DNEW_FOLDER_INTERFACE \
-	-DEXTERNAL_CODECS \
-	-I. \
-	`wx-config --unicode=yes --cxxflags`
+!IFDEF UNDER_CE
+LIBS = $(LIBS) ceshell.lib Commctrl.lib
+!ELSE
+LIBS = $(LIBS) comctl32.lib htmlhelp.lib comdlg32.lib Mpr.lib Gdi32.lib
+CFLAGS = $(CFLAGS) -DWIN_LONG_PATH -DSUPPORT_DEVICE_FILE
+!ENDIF
 
-include ../../../../makefile.crc32
-include ../../../../makefile.machine
+!include "FM.mak"
 
-PCH_NAME=$(PRE_COMPILED_HEADER)
+COMMON_OBJS = \
+  $O\IntToString.obj \
+  $O\Lang.obj \
+  $O\MyString.obj \
+  $O\MyVector.obj \
+  $O\NewHandler.obj \
+  $O\Random.obj \
+  $O\StringConvert.obj \
+  $O\StringToInt.obj \
+  $O\UTFConvert.obj \
+  $O\Wildcard.obj \
 
-LIBS=`wx-config --unicode=yes --libs` $(LOCAL_LIBS_DLL)
-
-OBJS=\
-OutStreamWithCRC.o \
-Agent.o \
-AgentOut.o \
-AgentProxy.o \
-ArchiveFolder.o \
-ArchiveFolderOpen.o \
-ArchiveFolderOut.o \
-UpdateCallbackAgent.o \
-ClassDefs.o \
-wxFM.o \
-FM.o \
-FM_rc.o \
-App.o \
-OpenCallback.o \
-MyLoadMenu.o \
-Panel.o \
-PanelCrc.o \
-PanelCopy.o \
-PanelItems.o \
-PanelListNotify.o \
-PanelFolderChange.o \
-PanelItemOpen.o \
-PanelMenu.o \
-PanelOperations.o \
-PanelSelect.o \
-PanelSort.o \
-PanelSplitFile.o \
-PropertyName.o \
-RegistryUtils.o \
-UpdateCallback100.o \
-ViewSettings.o \
-FileFolderPluginOpen.o \
-RootFolder.o \
-FSDrives.o \
-FSFolder.o \
-FSFolderCopy.o \
-FormatUtils.o \
-SysIconUtils.o \
-TextPairs.o \
-ExtractCallback.o \
-ProgramLocation.o \
-CopyDialog.o \
-CopyDialog_rc.o \
-ListViewDialog.o \
-ListViewDialog_rc.o \
-ProgressDialog2.o \
-ProgressDialog2_rc.o \
-SplitDialog.o \
-SplitDialog_rc.o \
-SplitUtils.o \
-StringUtils.o \
-ComboDialog.o \
-ComboDialog_rc.o \
-OverwriteDialog.o \
-OverwriteDialog_rc.o \
-PasswordDialog.o \
-PasswordDialog_rc.o \
-MessagesDialog.o \
-MessagesDialog_rc.o \
-ArchiveExtractCallback.o \
-ArchiveOpenCallback.o \
-LoadCodecs.o \
-OpenArchive.o \
-FilePathAutoRename.o \
-FileStreams.o \
-ProgressUtils.o \
-StreamUtils.o \
-DefaultName.o \
-EnumDirItems.o \
-ZipRegistry.o \
-ExtractingFilePath.o \
-PropIDUtils.o \
-UpdateAction.o \
-UpdateCallback.o \
-UpdatePair.o \
-UpdateProduce.o \
-SortUtils.o \
-TextConfig.o \
-UTFConvert.o \
-ArchiveName.o \
-CompressCall.o \
-WorkDir.o \
-CopyCoder.o \
-MyString.o \
-MyVector.o \
-StringConvert.o \
-StringToInt.o \
-IntToString.o \
-Wildcard.o \
-DLL.o \
-Error.o \
-FileDir.o \
-FileFind.o \
-FileIO.o \
-FileName.o \
-PropVariant.o \
-PropVariantConversions.o \
-Synchronization.o \
-Clipboard.o \
-Time.o \
-System.o \
-MyWindows.o \
-Registry.o \
-Window.o \
-Dialog.o \
-Controls.o \
-Window2.o \
-LangUtils.o \
-Lang.o \
-CRC.o \
-wine_date_and_time.o \
-wine_GetXXXDefaultLangID.o \
-Sort.o \
-Sha256.o \
-Alloc.o \
-Threads.o \
-$(OBJ_CRC32)
+WIN_OBJS = $(WIN_OBJS) \
+  $O\Clipboard.obj \
+  $O\CommonDialog.obj \
+  $O\DLL.obj \
+  $O\ErrorMsg.obj \
+  $O\FileDir.obj \
+  $O\FileFind.obj \
+  $O\FileIO.obj \
+  $O\FileLink.obj \
+  $O\FileName.obj \
+  $O\MemoryGlobal.obj \
+  $O\MemoryLock.obj \
+  $O\Menu.obj \
+  $O\ProcessUtils.obj \
+  $O\PropVariant.obj \
+  $O\PropVariantConv.obj \
+  $O\Registry.obj \
+  $O\ResourceString.obj \
+  $O\Shell.obj \
+  $O\Synchronization.obj \
+  $O\System.obj \
+  $O\TimeUtils.obj \
+  $O\Window.obj \
 
 
-OBJS2=\
-RegistryAssociations.o \
+WIN_CTRL_OBJS = \
+  $O\ComboBox.obj \
+  $O\Dialog.obj \
+  $O\ListView.obj \
+  $O\PropertyPage.obj \
+  $O\Window2.obj \
 
+7ZIP_COMMON_OBJS = \
+  $O\CreateCoder.obj \
+  $O\FilePathAutoRename.obj \
+  $O\FileStreams.obj \
+  $O\FilterCoder.obj \
+  $O\LimitedStreams.obj \
+  $O\MethodProps.obj \
+  $O\ProgressUtils.obj \
+  $O\PropId.obj \
+  $O\StreamObjects.obj \
+  $O\StreamUtils.obj \
+  $O\UniqBlocks.obj \
 
-OBJS_OUT=\
-ArchiveCommandLine.o \
-SetProperties.o \
-TempFiles.o \
-Update.o \
-MyMessages.o \
-FormatUtils.o \
-StringUtils.o \
-CommandLineParser.o \
-ListFileUtils.o \
+UI_COMMON_OBJS = \
+  $O\ArchiveExtractCallback.obj \
+  $O\ArchiveName.obj \
+  $O\ArchiveOpenCallback.obj \
+  $O\CompressCall.obj \
+  $O\DefaultName.obj \
+  $O\EnumDirItems.obj \
+  $O\ExtractingFilePath.obj \
+  $O\HashCalc.obj \
+  $O\LoadCodecs.obj \
+  $O\OpenArchive.obj \
+  $O\PropIDUtils.obj \
+  $O\SetProperties.obj \
+  $O\SortUtils.obj \
+  $O\UpdateAction.obj \
+  $O\UpdateCallback.obj \
+  $O\UpdatePair.obj \
+  $O\UpdateProduce.obj \
+  $O\WorkDir.obj \
+  $O\ZipRegistry.obj \
 
-include ../../../../makefile.glb
+EXPLORER_OBJS = \
+  $O\ContextMenu.obj \
+  $O\RegistryContextMenu.obj \
 
+GUI_OBJS = \
+  $O\HashGUI.obj \
+
+COMPRESS_OBJS = \
+  $O\CopyCoder.obj \
+
+C_OBJS = \
+  $O\Alloc.obj \
+  $O\Sort.obj \
+  $O\Threads.obj \
+
+!include "../../7zip.mak"

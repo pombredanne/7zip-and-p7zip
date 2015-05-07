@@ -1,33 +1,28 @@
-PROG=../../../../bin/Client7z$(BINSUFFIX)
+PROG = 7zcl.exe
+MY_CONSOLE = 1
 
-LOCAL_FLAGS=-DUNICODE -D_UNICODE
+CURRENT_OBJS = \
+  $O\Client7z.obj \
 
-include ../../../../makefile.crc32
-include ../../../../makefile.machine
+COMMON_OBJS = \
+  $O\IntToString.obj \
+  $O\NewHandler.obj \
+  $O\MyString.obj \
+  $O\StringConvert.obj \
+  $O\StringToInt.obj \
+  $O\MyVector.obj \
+  $O\Wildcard.obj \
 
-PCH_NAME=$(PRE_COMPILED_HEADER)
+WIN_OBJS = \
+  $O\DLL.obj \
+  $O\FileDir.obj \
+  $O\FileFind.obj \
+  $O\FileIO.obj \
+  $O\FileName.obj \
+  $O\PropVariant.obj \
+  $O\PropVariantConv.obj \
 
-LIBS=$(LOCAL_LIBS_DLL)
+7ZIP_COMMON_OBJS = \
+  $O\FileStreams.obj \
 
-OBJS = \
-wine_date_and_time.o \
-MyWindows.o \
-DLL.o \
-FileDir.o \
-FileFind.o \
-FileIO.o \
-FileName.o \
-PropVariant.o \
-PropVariantConversions.o \
-IntToString.o \
-MyString.o \
-StringConvert.o \
-UTFConvert.o \
-MyVector.o \
-Wildcard.o \
-FileStreams.o \
-Threads.o \
-Client7z.o
-
-include ../../../../makefile.glb
-
+!include "../../7zip.mak"

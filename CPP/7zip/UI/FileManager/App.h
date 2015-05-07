@@ -3,8 +3,8 @@
 #ifndef __APP_H
 #define __APP_H
 
-// #include "Windows/Control/CommandBar.h"
-// #include "Windows/Control/ImageList.h"
+#include "../../../Windows/Control/CommandBar.h"
+#include "../../../Windows/Control/ImageList.h"
 
 #include "AppState.h"
 #include "Panel.h"
@@ -18,11 +18,15 @@ const int kNumPanelsMax = 2;
 
 extern bool g_IsSmallScreen;
 
+const int kMenuCmdID_Plugin_Start = 1000; // must be large them context menu IDs
+const int kMenuCmdID_Toolbar_Start = 1500;
+
 enum
 {
-  kAddCommand = kToolbarStartID,
-  kExtractCommand,
-  kTestCommand
+  kMenuCmdID_Toolbar_Add = kMenuCmdID_Toolbar_Start,
+  kMenuCmdID_Toolbar_Extract,
+  kMenuCmdID_Toolbar_Test,
+  kMenuCmdID_Toolbar_End
 };
 
 class CPanelCallbackImp: public CPanelCallback
@@ -48,7 +52,6 @@ public:
 
 class CApp;
 
-#if _WIN32
 class CDropTarget:
   public IDropTarget,
   public CMyUnknownImp
@@ -101,13 +104,13 @@ public:
   int SrcPanelIndex;              // index of D&D source_panel
   int TargetPanelIndex;           // what panel to use as target_panel of Application
 };
-#endif
 
 class CApp
 {
 public:
   NWindows::CWindow _window;
   bool ShowSystemMenu;
+  // bool ShowDeletedFiles;
   int NumPanels;
   int LastFocusedPanel;
 
@@ -121,7 +124,6 @@ public:
   CPanel Panels[kNumPanelsMax];
   bool PanelsCreated[kNumPanelsMax];
 
-#ifdef _WIN32
   NWindows::NControl::CImageList _buttonsImageList;
 
   #ifdef UNDER_CE
@@ -131,39 +133,40 @@ public:
 
   CDropTarget *_dropTargetSpec;
   CMyComPtr<IDropTarget> _dropTarget;
-#endif
 
-  CApp(): _window(0), NumPanels(2), LastFocusedPanel(0) {}
+  UString LangString_N_SELECTED_ITEMS;
+  
+  void ReloadLang();
 
-#ifdef _WIN32
+  CApp(): _window(0), NumPanels(2), LastFocusedPanel(0),
+    AutoRefresh_Mode(true)
+  {
+    SetPanels_AutoRefresh_Mode();
+  }
+
   void CreateDragTarget()
   {
     _dropTargetSpec = new CDropTarget();
     _dropTarget = _dropTargetSpec;
     _dropTargetSpec->App = (this);
   }
-#endif
 
   void SetFocusedPanel(int index)
   {
     LastFocusedPanel = index;
-    // FIXME _dropTargetSpec->TargetPanelIndex = LastFocusedPanel;
+    _dropTargetSpec->TargetPanelIndex = LastFocusedPanel;
   }
 
   void DragBegin(int panelIndex)
   {
-#ifdef _WIN32
     _dropTargetSpec->TargetPanelIndex = (NumPanels > 1) ? 1 - panelIndex : panelIndex;
     _dropTargetSpec->SrcPanelIndex = panelIndex;
-#endif
   }
 
   void DragEnd()
   {
-#ifdef _WIN32
     _dropTargetSpec->TargetPanelIndex = LastFocusedPanel;
     _dropTargetSpec->SrcPanelIndex = -1;
-#endif
   }
 
   
@@ -178,7 +181,7 @@ public:
   void Release();
 
   // void SetFocus(int panelIndex) { Panels[panelIndex].SetFocusToList(); }
-  // void SetFocusToLastItem() { Panels[LastFocusedPanel].SetFocusToLastRememberedItem(); }
+  void SetFocusToLastItem() { Panels[LastFocusedPanel].SetFocusToLastRememberedItem(); }
   int GetFocusedPanelIndex() const { return LastFocusedPanel; }
   bool IsPanelVisible(int index) const { return (NumPanels > 1 || index == LastFocusedPanel); }
   CPanel &GetFocusedPanel() { return Panels[GetFocusedPanelIndex()]; }
@@ -187,17 +190,21 @@ public:
   void OpenItem() { GetFocusedPanel().OpenSelectedItems(true); }
   void OpenItemInside() { GetFocusedPanel().OpenFocusedItemAsInternal(); }
   void OpenItemOutside() { GetFocusedPanel().OpenSelectedItems(false); }
-  void EditItem() { GetFocusedPanel().EditItem(); }
+  void EditItem(bool useEditor) { GetFocusedPanel().EditItem(useEditor); }
   void Rename() { GetFocusedPanel().RenameFile(); }
   void CopyTo() { OnCopy(false, false, GetFocusedPanelIndex()); }
   void MoveTo() { OnCopy(true, false, GetFocusedPanelIndex()); }
   void Delete(bool toRecycleBin) { GetFocusedPanel().DeleteItems(toRecycleBin); }
-  void CalculateCrc();
+  void CalculateCrc(const UString &methodName);
   void DiffFiles();
   void Split();
   void Combine();
   void Properties() { GetFocusedPanel().Properties(); }
   void Comment() { GetFocusedPanel().ChangeComment(); }
+  
+  #ifndef UNDER_CE
+  void Link();
+  #endif
 
   void CreateFolder() { GetFocusedPanel().CreateFolder(); }
   void CreateFile() { GetFocusedPanel().CreateFile(); }
@@ -212,7 +219,7 @@ public:
   void SelectSpec(bool selectMode) { GetFocusedPanel().SelectSpec(selectMode); }
   void SelectByType(bool selectMode) { GetFocusedPanel().SelectByType(selectMode); }
 
-  void RefreshStatusBar() { GetFocusedPanel().RefreshStatusBar(); }
+  void Refresh_StatusBar() { GetFocusedPanel().Refresh_StatusBar(); }
 
   void SetListViewMode(UInt32 index) { GetFocusedPanel().SetListViewMode(index); }
   UInt32 GetListViewMode() { return GetFocusedPanel().GetListViewMode(); }
@@ -251,8 +258,30 @@ public:
   void SetListSettings();
   void SetShowSystemMenu();
   HRESULT SwitchOnOffOnePanel();
+  
   bool GetFlatMode() { return Panels[LastFocusedPanel].GetFlatMode(); }
+  // bool Get_ShowNtfsStrems_Mode() { return Panels[LastFocusedPanel].Get_ShowNtfsStrems_Mode(); }
+  
   void ChangeFlatMode() { Panels[LastFocusedPanel].ChangeFlatMode(); }
+  // void Change_ShowNtfsStrems_Mode() { Panels[LastFocusedPanel].Change_ShowNtfsStrems_Mode(); }
+  // void Change_ShowDeleted() { ShowDeletedFiles = !ShowDeletedFiles; }
+
+  bool AutoRefresh_Mode;
+  bool Get_AutoRefresh_Mode()
+  {
+    // return Panels[LastFocusedPanel].Get_ShowNtfsStrems_Mode();
+    return AutoRefresh_Mode;
+  }
+  void Change_AutoRefresh_Mode()
+  {
+    AutoRefresh_Mode = !AutoRefresh_Mode;
+    SetPanels_AutoRefresh_Mode();
+  }
+  void SetPanels_AutoRefresh_Mode()
+  {
+    for (int i = 0; i < kNumPanelsMax; i++)
+      Panels[i].Set_AutoRefresh_Mode(AutoRefresh_Mode);
+  }
 
   void OpenBookmark(int index) { GetFocusedPanel().OpenBookmark(index); }
   void SetBookmark(int index) { GetFocusedPanel().SetBookmark(index); }
@@ -312,9 +341,7 @@ public:
   void ExtractArchives() { GetFocusedPanel().ExtractArchives(); }
   void TestArchives() { GetFocusedPanel().TestArchives(); }
 
-#ifdef _WIN32
   void OnNotify(int ctrlID, LPNMHDR pnmh);
-#endif
 
   UString PrevTitle;
   void RefreshTitle(bool always = false);

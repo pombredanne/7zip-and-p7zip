@@ -18,9 +18,9 @@
 #undef _WIN32
  
 #ifndef _UNICODE
-#include "Common/StringConvert.h"
+#include "../Common/StringConvert.h"
 #endif
-#include "Windows/Window.h"
+#include "Window.h"
 
 void verify_main_thread(void);
 

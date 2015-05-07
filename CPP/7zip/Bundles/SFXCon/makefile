@@ -1,146 +1,124 @@
-PROG=../../../../bin/7zCon.sfx
-
-LOCAL_FLAGS= \
+PROG = 7zCon.sfx
+MY_CONSOLE = 1
+CFLAGS = $(CFLAGS) \
   -DEXTRACT_ONLY \
   -DNO_READ_FROM_CODER \
   -D_SFX \
-  -DUNICODE -D_UNICODE
 
-include ../../../../makefile.crc32
-include ../../../../makefile.machine
-
-PCH_NAME=$(PRE_COMPILED_HEADER)
-
-LIBS=$(LOCAL_LIBS)
-
-SFX_CONSOLE_OBJS = \
-  Main.o \
+CURRENT_OBJS = \
+  $O\SfxCon.obj \
 
 CONSOLE_OBJS = \
-  ConsoleClose.o \
-  ExtractCallbackConsole.o \
-  List.o \
-  MainAr.o \
-  OpenCallbackConsole.o \
-  UserInputUtils.o \
+  $O\ConsoleClose.obj \
+  $O\ExtractCallbackConsole.obj \
+  $O\List.obj \
+  $O\MainAr.obj \
+  $O\OpenCallbackConsole.obj \
+  $O\UserInputUtils.obj \
 
-# NewHandler.o
 COMMON_OBJS = \
-  CommandLineParser.o \
-  CRC.o \
-  IntToString.o \
-  StdInStream.o \
-  StdOutStream.o \
-  MyString.o \
-  MyWindows.o\
-  StringConvert.o \
-  UTFConvert.o \
-  MyVector.o \
-  Wildcard.o \
+  $O\CommandLineParser.obj \
+  $O\CRC.obj \
+  $O\IntToString.obj \
+  $O\MyString.obj \
+  $O\MyVector.obj \
+  $O\NewHandler.obj \
+  $O\StdInStream.obj \
+  $O\StdOutStream.obj \
+  $O\StringConvert.obj \
+  $O\Wildcard.obj \
+  $O\UTFConvert.obj \
 
-# DLL.o 
 WIN_OBJS = \
-  Error.o \
-  FileDir.o \
-  FileFind.o \
-  FileIO.o \
-  FileName.o \
-  PropVariant.o \
-  PropVariantConversions.o \
-  Synchronization.o \
-  System.o
+  $O\DLL.obj \
+  $O\ErrorMsg.obj \
+  $O\FileDir.obj \
+  $O\FileFind.obj \
+  $O\FileIO.obj \
+  $O\FileName.obj \
+  $O\PropVariant.obj \
+  $O\PropVariantConv.obj \
+  $O\Synchronization.obj \
 
 7ZIP_COMMON_OBJS = \
-  CreateCoder.o \
-  CWrappers.o \
-  FilePathAutoRename.o \
-  FileStreams.o \
-  InBuffer.o \
-  FilterCoder.o \
-  LimitedStreams.o \
-  LockedStream.o \
-  OutBuffer.o \
-  ProgressUtils.o \
-  StreamBinder.o \
-  StreamObjects.o \
-  StreamUtils.o \
-  VirtThread.o \
+  $O\CreateCoder.obj \
+  $O\CWrappers.obj \
+  $O\FilePathAutoRename.obj \
+  $O\FileStreams.obj \
+  $O\InBuffer.obj \
+  $O\FilterCoder.obj \
+  $O\LimitedStreams.obj \
+  $O\LockedStream.obj \
+  $O\OutBuffer.obj \
+  $O\ProgressUtils.obj \
+  $O\PropId.obj \
+  $O\StreamBinder.obj \
+  $O\StreamObjects.obj \
+  $O\StreamUtils.obj \
+  $O\VirtThread.obj \
 
 UI_COMMON_OBJS = \
-  ArchiveExtractCallback.o \
-  ArchiveOpenCallback.o \
-  DefaultName.o \
-  LoadCodecs.o \
-  Extract.o \
-  ExtractingFilePath.o \
-  OpenArchive.o \
-  PropIDUtils.o \
+  $O\ArchiveExtractCallback.obj \
+  $O\ArchiveOpenCallback.obj \
+  $O\DefaultName.obj \
+  $O\LoadCodecs.obj \
+  $O\Extract.obj \
+  $O\ExtractingFilePath.obj \
+  $O\OpenArchive.obj \
+  $O\PropIDUtils.obj \
+
+AR_OBJS = \
+  $O\SplitHandler.obj \
 
 AR_COMMON_OBJS = \
-  CoderMixer2.o \
-  CoderMixer2MT.o \
-  CrossThreadProgress.o \
-  ItemNameUtils.o \
-  OutStreamWithCRC.o \
+  $O\CoderMixer2.obj \
+  $O\CoderMixer2MT.obj \
+  $O\CrossThreadProgress.obj \
+  $O\ItemNameUtils.obj \
+  $O\MultiStream.obj \
+  $O\OutStreamWithCRC.obj \
 
 
 7Z_OBJS = \
-  7zDecode.o \
-  7zExtract.o \
-  7zFolderOutStream.o \
-  7zHandler.o \
-  7zHeader.o \
-  7zIn.o \
-  7zRegister.o \
+  $O\7zDecode.obj \
+  $O\7zExtract.obj \
+  $O\7zFolderOutStream.obj \
+  $O\7zHandler.obj \
+  $O\7zIn.obj \
+  $O\7zRegister.obj \
 
 COMPRESS_OBJS = \
-  BranchCoder.o \
-  Bcj2Coder.o \
-  Bcj2Register.o \
-  BcjCoder.o \
-  BcjRegister.o \
-  CopyCoder.o \
-  CopyRegister.o \
-  Lzma2Decoder.o \
-  Lzma2Register.o \
-  LzmaDecoder.o \
-  LzmaRegister.o \
-  PpmdDecoder.o \
-  PpmdRegister.o \
+  $O\BranchCoder.obj \
+  $O\Bcj2Coder.obj \
+  $O\Bcj2Register.obj \
+  $O\BcjCoder.obj \
+  $O\BcjRegister.obj \
+  $O\CopyCoder.obj \
+  $O\CopyRegister.obj \
+  $O\Lzma2Decoder.obj \
+  $O\Lzma2Register.obj \
+  $O\LzmaDecoder.obj \
+  $O\LzmaRegister.obj \
+  $O\PpmdDecoder.obj \
+  $O\PpmdRegister.obj \
 
 CRYPTO_OBJS = \
-  7zAes.o \
-  7zAesRegister.o \
-  MyAes.o \
+  $O\7zAes.obj \
+  $O\7zAesRegister.obj \
+  $O\MyAes.obj \
 
 C_OBJS = \
-  Aes.o \
-  Alloc.o \
-  Bra86.o \
-  Lzma2Dec.o \
-  LzmaDec.o \
-  Ppmd7.o \
-  Ppmd7Dec.o \
-  Sha256.o \
-  Threads.o \
+  $O\Alloc.obj \
+  $O\Bra86.obj \
+  $O\CpuArch.obj \
+  $O\Lzma2Dec.obj \
+  $O\LzmaDec.obj \
+  $O\Ppmd7.obj \
+  $O\Ppmd7Dec.obj \
+  $O\Sha256.obj \
+  $O\Threads.obj \
 
-OBJS = \
-  myGetTickCount.o\
-  wine_date_and_time.o\
-  mySplitCommandLine.o\
-  $(SFX_CONSOLE_OBJS) \
-  $(CONSOLE_OBJS) \
-  $(COMMON_OBJS) \
-  $(WIN_OBJS) \
-  $(7ZIP_COMMON_OBJS) \
-  $(UI_COMMON_OBJS) \
-  $(AR_COMMON_OBJS) \
-  $(7Z_OBJS) \
-  $(COMPRESS_OBJS) \
-  $(CRYPTO_OBJS) \
-  $(C_OBJS) \
-  $(OBJ_CRC32)
+!include "../../Aes.mak"
+!include "../../Crc.mak"
 
-
-include ../../../../makefile.glb
-
+!include "../../7zip.mak"
