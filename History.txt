@@ -4,6 +4,31 @@ Note: this file has been reconstructed from multiple releases
 including binary-only releases. There may be some redundancies.
  (no source, binary only)
 
+15.00 alpha    2015-04-01 (no source, binary only)
+-------------------------
+- 7-Zip File Manager now can operate with alternate file streams at NTFS
+  volumes via "File / Alternate Streams" menu command.
+- 7-Zip now can extract .zipx (WinZip) archives that use xz compression.
+- new optional "section size" parameter for BCJ2 filter for compression ratio improving.
+  Example: -mf=BCJ2:d9M, if largest executable section in files is smaller than 9 MB. 
+- Speed optimizations for BCJ2 filter and SHA-1 and SHA-256 calculation.
+- Console version now uses stderr stream for error messages.
+- Console version now shows names of processed files only in progress line by default.
+- new -bb[0-3] switch to set output log level. -bb1 shows names of processed files in log. 
+- new -bs[o|e|p][0|1|2] switch to set stream for output messages;
+      o: output, e: error, p: progress line; 0: disable, 1: stdout, 2: stderr.
+- new -bt switch to show execution time statistics.
+- new -myx[0-9] switch to set level of file analysis.
+- new -mmtf- switch to set single thread mode for filters.
+- The BUG was fixed:
+  7-Zip didn't restore NTFS permissions for folders during extracting from WIM archives.
+- The BUG was fixed:
+  The command line version: if the command "rn" (Rename) was called with more 
+  than one pair of paths, 7-Zip used only first rename pair.
+- Some bugs were fixed.
+
+
+
 
 9.38 beta      2015-01-03
 -------------------------   
