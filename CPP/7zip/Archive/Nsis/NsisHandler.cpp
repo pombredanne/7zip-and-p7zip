@@ -138,8 +138,8 @@ STDMETHODIMP CHandler::GetArchiveProperty(PROPID propID, PROPVARIANT *value)
     case kpidMethod: prop = _methodString; break;
     case kpidSolid: prop = _archive.IsSolid; break;
     case kpidOffset: prop = _archive.StartOffset; break;
-    case kpidPhySize: prop = _archive.ExeStub.Size() + _archive.FirstHeader.ArcSize; break;
-    case kpidEmbeddedStubSize: prop = _archive.ExeStub.Size(); break;
+    case kpidPhySize: prop = UINT64(_archive.ExeStub.Size() + _archive.FirstHeader.ArcSize); break;
+    case kpidEmbeddedStubSize: prop = UINT64(_archive.ExeStub.Size()); break;
     case kpidHeadersSize: prop = _archive.FirstHeader.HeaderSize; break;
     
     case kpidErrorFlags:
@@ -611,7 +611,7 @@ STDMETHODIMP CHandler::Extract(const UInt32 *indices, UInt32 numItems,
             HRESULT res = _archive.Decoder.Decode(
                 writeToTemp1 ? &tempBuf : NULL,
                 item.IsUninstaller, item.PatchSize,
-                item.IsUninstaller ? NULL : realOutStream,
+                item.IsUninstaller ? NULL : (ISequentialOutStream *)realOutStream,
                 progress,
                 curPacked, curUnpacked32);
             curUnpacked = curUnpacked32;

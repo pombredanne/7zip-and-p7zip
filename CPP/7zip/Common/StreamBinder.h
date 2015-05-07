@@ -9,9 +9,10 @@
 
 class CStreamBinder
 {
-  NWindows::NSynchronization::CManualResetEvent _canWrite_Event;
+  NWindows::NSynchronization::CManualResetEventWFMO _canWrite_Event;
   NWindows::NSynchronization::CManualResetEvent _canRead_Event;
-  NWindows::NSynchronization::CManualResetEvent _readingWasClosed_Event;
+  NWindows::NSynchronization::CManualResetEventWFMO _readingWasClosed_Event;
+  NWindows::NSynchronization::CSynchro * _synchroFor_canWrite_Event_and_readingWasClosed_Event;
   bool _waitWrite;
   UInt32 _bufSize;
   const void *_buf;

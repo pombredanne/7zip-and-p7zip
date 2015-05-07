@@ -51,7 +51,7 @@ void CMemBlockManager::FreeBlock(void *p)
 }
 
 
-HRes CMemBlockManagerMt::AllocateSpace(NWindows::NSynchronization::CSynchro *sync,size_t numBlocks, size_t numNoLockBlocks)
+HRes CMemBlockManagerMt::AllocateSpace(NWindows::NSynchronization::CSynchro *sync ,size_t numBlocks, size_t numNoLockBlocks)
 {
   if (numNoLockBlocks > numBlocks)
     return E_INVALIDARG;
@@ -62,7 +62,7 @@ HRes CMemBlockManagerMt::AllocateSpace(NWindows::NSynchronization::CSynchro *syn
   return Semaphore.Create(sync,(LONG)numLockBlocks, (LONG)numLockBlocks);
 }
 
-HRes CMemBlockManagerMt::AllocateSpaceAlways(NWindows::NSynchronization::CSynchro *sync,size_t desiredNumberOfBlocks, size_t numNoLockBlocks)
+HRes CMemBlockManagerMt::AllocateSpaceAlways(NWindows::NSynchronization::CSynchro *sync, size_t desiredNumberOfBlocks, size_t numNoLockBlocks)
 {
   if (numNoLockBlocks > desiredNumberOfBlocks)
     return E_INVALIDARG;

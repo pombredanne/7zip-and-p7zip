@@ -90,6 +90,7 @@ bool CBenchmarkDialog::OnInit()
 
   Sync.Init();
 
+#ifdef _WIN32
   if (TotalMode)
   {
     _consoleEdit.Attach(GetItem(IDE_BENCH2_EDIT));
@@ -110,6 +111,7 @@ bool CBenchmarkDialog::OnInit()
     if (_font._font)
       _consoleEdit.SendMessage(WM_SETFONT, (WPARAM)_font._font, TRUE);
   }
+#endif
 
   UInt32 numCPUs = NSystem::GetNumberOfProcessors();
   if (numCPUs < 1)
@@ -190,6 +192,7 @@ bool CBenchmarkDialog::OnInit()
   return CModalDialog::OnInit();
 }
 
+#ifdef _WIN32
 bool CBenchmarkDialog::OnSize(WPARAM /* wParam */, int xSize, int ySize)
 {
   if (!TotalMode)
@@ -223,6 +226,7 @@ bool CBenchmarkDialog::OnSize(WPARAM /* wParam */, int xSize, int ySize)
   }
   return false;
 }
+#endif
 
 UInt32 CBenchmarkDialog::GetNumberOfThreads()
 {

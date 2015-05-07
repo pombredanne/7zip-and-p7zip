@@ -16,7 +16,7 @@ MY_CPU_LE_UNALIGN means that CPU is LITTLE ENDIAN and CPU supports unaligned mem
 If MY_CPU_LE_UNALIGN is not defined, we don't know about these properties of platform.
 */
 
-#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
+#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__AMD64__) || defined(__amd64__)
 #define MY_CPU_AMD64
 #endif
 
@@ -122,6 +122,7 @@ Stop_Compiling_Bad_Endian
 
 
 #ifdef MY_CPU_X86_OR_AMD64
+#ifdef P7ZIP_USE_ASM
 
 typedef struct
 {
@@ -150,6 +151,7 @@ int x86cpuid_GetFirm(const Cx86cpuid *p);
 Bool CPU_Is_InOrder();
 Bool CPU_Is_Aes_Supported();
 
+#endif
 #endif
 
 EXTERN_C_END

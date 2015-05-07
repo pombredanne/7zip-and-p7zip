@@ -140,7 +140,7 @@ struct CThreadInfo
 
   NWindows::CThread Thread;
   NWindows::NSynchronization::CAutoResetEvent CompressEvent;
-  NWindows::NSynchronization::CAutoResetEvent CompressionCompletedEvent;
+  NWindows::NSynchronization::CAutoResetEventWFMO CompressionCompletedEvent;
   bool ExitThread;
 
   CMtCompressProgress *ProgressSpec;
@@ -164,10 +164,10 @@ struct CThreadInfo
       Coder(options)
   {}
   
-  HRESULT CreateEvents()
+  HRESULT CreateEvents(CSynchro *sync)
   {
     RINOK(CompressEvent.CreateIfNotCreated());
-    return CompressionCompletedEvent.CreateIfNotCreated();
+    return CompressionCompletedEvent.CreateIfNotCreated(sync);
   }
   HRes CreateThread() { return Thread.Create(CoderThread, this); }
 
@@ -604,6 +604,13 @@ static HRESULT Update2(
 
   #ifndef _7ZIP_ST
 
+  // Warning : before memManager, threads and compressingCompletedEvents
+  // in order to have a "good" order for the destructor
+  NWindows::NSynchronization::CSynchro synchroForCompressingCompletedEvents;
+  synchroForCompressingCompletedEvents.Create();
+  NWindows::NSynchronization::CSynchro synchroForOutStreamSpec;
+  synchroForOutStreamSpec.Create();
+
   CObjectVector<CItemOut> items;
 
   CMtProgressMixer *mtProgressMixerSpec = new CMtProgressMixer;
@@ -621,7 +628,7 @@ static HRESULT Update2(
   CRecordVector<int> threadIndices;  // list threads in order of updateItems
 
   {
-    RINOK(memManager.AllocateSpaceAlways((size_t)numThreads * (kMemPerThread / kBlockSize)));
+    RINOK(memManager.AllocateSpaceAlways(&synchroForOutStreamSpec,(size_t)numThreads * (kMemPerThread / kBlockSize)));
     for (i = 0; i < updateItems.Size(); i++)
       refs.Refs.Add(CMemBlocks2());
 
@@ -635,9 +642,9 @@ static HRESULT Update2(
       #ifdef EXTERNAL_CODECS
       threadInfo.__externalCodecs = __externalCodecs;
       #endif
-      RINOK(threadInfo.CreateEvents());
+      RINOK(threadInfo.CreateEvents(&synchroForCompressingCompletedEvents));
       threadInfo.OutStreamSpec = new COutMemStream(&memManager);
-      RINOK(threadInfo.OutStreamSpec->CreateEvents());
+      RINOK(threadInfo.OutStreamSpec->CreateEvents(&synchroForOutStreamSpec));
       threadInfo.OutStream = threadInfo.OutStreamSpec;
       threadInfo.IsFree = true;
       threadInfo.ProgressSpec = new CMtCompressProgress();

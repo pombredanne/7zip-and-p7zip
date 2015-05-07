@@ -56,7 +56,7 @@ public:
   
 HRESULT CThreadFolderOperations::ProcessVirt()
 {
-  NCOM::CComInitializer comInitializer;
+  // FIXME NCOM::CComInitializer comInitializer;
   switch(OpType)
   {
     case FOLDER_TYPE_CREATE_FOLDER:
@@ -81,7 +81,7 @@ HRESULT CThreadFolderOperations::DoOperation(CPanel &panel, const UString &progr
   UpdateCallback = UpdateCallbackSpec;
   UpdateCallbackSpec->ProgressDialog = &ProgressDialog;
 
-  ProgressDialog.WaitMode = true;
+  // FIXME ProgressDialog.WaitMode = true;
   ProgressDialog.Sync.FinalMessage.ErrorMessage.Title = titleError;
   Result = S_OK;
 
@@ -172,6 +172,7 @@ void CPanel::DeleteItems(bool NON_CE_VAR(toRecycleBin))
         memcpy(buffer.GetCurPtrAndGrow(path.Len() + 1), (const WCHAR *)path, (path.Len() + 1) * sizeof(WCHAR));
       }
       *buffer.GetCurPtrAndGrow(1) = 0;
+#ifdef _WIN32
       if (maxLen >= MAX_PATH)
       {
         if (toRecycleBin)
@@ -194,17 +195,21 @@ void CPanel::DeleteItems(bool NON_CE_VAR(toRecycleBin))
         fo.fAnyOperationsAborted = FALSE;
         fo.hNameMappings = 0;
         fo.lpszProgressTitle = 0;
-        // int res;
+        int res;
         #ifdef _UNICODE
-        /* res = */ ::SHFileOperationW(&fo);
+        res = ::SHFileOperationW(&fo);
         #else
         SHFileOperationWP shFileOperationW = (SHFileOperationWP)
           ::GetProcAddress(::GetModuleHandleW(L"shell32.dll"), "SHFileOperationW");
         if (shFileOperationW == 0)
           return;
-        /* res = */ shFileOperationW(&fo);
+        res = shFileOperationW(&fo);
         #endif
       }
+#else
+      // FIXME - how to use the recycle bin undex Gnome or KDE ?
+      useInternalDelete = true;
+#endif
     }
     /*
     if (fo.fAnyOperationsAborted)
@@ -266,6 +271,7 @@ void CPanel::DeleteItems(bool NON_CE_VAR(toRecycleBin))
   RefreshListCtrl(state);
 }
 
+#ifdef _WIN32
 BOOL CPanel::OnBeginLabelEdit(LV_DISPINFOW * lpnmh)
 {
   int realIndex = GetRealIndex(lpnmh->item);
@@ -276,6 +282,7 @@ BOOL CPanel::OnBeginLabelEdit(LV_DISPINFOW * lpnmh)
     return TRUE;
   return FALSE;
 }
+#endif
 
 static UString GetLastPart(const UString name)
 {
@@ -302,6 +309,7 @@ bool CPanel::CorrectFsPath(const UString &path2, UString &result)
   return ::CorrectFsPath(_currentFolderPrefix, path2, result);
 }
 
+#ifdef _WIN32
 BOOL CPanel::OnEndLabelEdit(LV_DISPINFOW * lpnmh)
 {
   if (lpnmh->item.pszText == NULL)
@@ -372,6 +380,7 @@ BOOL CPanel::OnEndLabelEdit(LV_DISPINFOW * lpnmh)
   PostMessage(kReLoadMessage);
   return TRUE;
 }
+#endif
 
 bool Dlg_CreateFolder(HWND wnd, UString &destName);
 
@@ -529,7 +538,7 @@ void CPanel::ChangeComment()
   LangString(IDS_COMMENT2, dlg.Static);
   if (dlg.Create(GetParent()) != IDOK)
     return;
-  NCOM::CPropVariant propVariant = (const wchar_t *)dlg.Value;
+  NCOM::CPropVariant propVariant(dlg.Value);
 
   CDisableNotify disableNotify(*this);
   HRESULT result = folderOperations->SetProperty(realIndex, kpidComment, &propVariant, NULL);
@@ -542,3 +551,18 @@ void CPanel::ChangeComment()
   }
   RefreshListCtrl(state);
 }
+
+// From CPP/7zip/UI/FileManager/BrowseDialog.cpp
+bool Dlg_CreateFolder(HWND wnd, UString &destName)
+{
+  destName.Empty();
+  CComboDialog dlg;
+  LangString(IDS_CREATE_FOLDER, dlg.Title);
+  LangString(IDS_CREATE_FOLDER_NAME, dlg.Static);
+  LangString(IDS_CREATE_FOLDER_DEFAULT_NAME, dlg.Value);
+  if (dlg.Create(wnd) != IDOK)
+    return false;
+  destName = dlg.Value;
+  return true;
+}
+

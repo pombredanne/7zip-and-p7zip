@@ -7,6 +7,21 @@
 
 #include "UserInputUtils.h"
 
+#ifdef USE_FLTK
+// the programs like file-roller or xarchiver do not support archives with password
+// these programs freeze because p7zip is waiting for a password
+// defining USE_FLTK allows p7zip to use a popup in order to ask the password.
+#include <FL/Fl.H>
+#include <FL/Fl_Window.H>
+#include <FL/fl_ask.H>
+#else
+#ifdef ENV_HAVE_GETPASS
+#include <pwd.h>
+#include <unistd.h>
+#include "Common/MyException.h"
+#endif
+#endif
+
 static const char kYes = 'y';
 static const char kNo = 'n';
 static const char kYesAll = 'a';
@@ -48,8 +63,33 @@ NUserAnswerMode::EEnum ScanUserYesNoAllQuit(CStdOutStream *outStream)
 #endif
 #endif
 
-UString GetPassword(CStdOutStream *outStream)
+UString GetPassword(CStdOutStream *outStream,bool verify)
 {
+#ifdef USE_FLTK 
+  const char *r = fl_password("Enter password", 0);
+  AString oemPassword = "";
+  if (r) oemPassword = r;
+#else /* USE_FLTK */
+#ifdef ENV_HAVE_GETPASS
+  (*outStream) << "\nEnter password (will not be echoed) :";
+  outStream->Flush();
+  AString oemPassword = getpass("");
+  if (verify)
+  {
+    (*outStream) << "Verify password (will not be echoed) :";
+  outStream->Flush();
+    AString oemPassword2 = getpass("");
+    if (oemPassword != oemPassword2) throw "password verification failed";
+  }
+#else
+  (*outStream) << "\nEnter password:";
+  outStream->Flush();
+  AString oemPassword = g_StdIn.ScanStringUntilNewLine();
+#endif
+#endif /* USE_FLTK */
+  return MultiByteToUnicodeString(oemPassword, CP_OEMCP);
+
+#if 0
   (*outStream) << "\nEnter password"
       #ifdef MY_DISABLE_ECHO
       " (will not be echoed)"
@@ -73,4 +113,5 @@ UString GetPassword(CStdOutStream *outStream)
   #else
   return g_StdIn.ScanUStringUntilNewLine();
   #endif
+#endif
 }

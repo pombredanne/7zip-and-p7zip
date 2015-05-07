@@ -83,6 +83,7 @@ static int GetColumnAlign(PROPID propID, VARTYPE varType)
 
 HRESULT CPanel::InitColumns()
 {
+printf("CPanel::InitColumns\n");
   if (_needSaveInfo)
     SaveListViewInfo();
 
@@ -91,12 +92,12 @@ HRESULT CPanel::InitColumns()
 
   ReadListViewInfo();
 
-  // PROPID sortID;
+  PROPID sortID;
   /*
   if (_listViewInfo.SortIndex >= 0)
     sortID = _listViewInfo.Columns[_listViewInfo.SortIndex].PropID;
   */
-  // sortID = _listViewInfo.SortID;
+  sortID = _listViewInfo.SortID;
 
   _ascending = _listViewInfo.Ascending;
 
@@ -234,7 +235,13 @@ HRESULT CPanel::RefreshListCtrl()
   return RefreshListCtrl(UString(), -1, true, UStringVector());
 }
 
-int CALLBACK CompareItems(LPARAM lParam1, LPARAM lParam2, LPARAM lpData);
+// int CALLBACK CompareItems(LPARAM lParam1, LPARAM lParam2, LPARAM lpData);
+int
+#if defined(__WIN32__) && !defined(__WXMICROWIN__) // FIXME
+  wxCALLBACK
+#endif
+ CompareItems_WX(long item1, long item2, long sortData);
+
 
 
 void CPanel::GetSelectedNames(UStringVector &selectedNames)
@@ -328,6 +335,7 @@ void CPanel::SetFocusedSelectedItem(int index, bool select)
 HRESULT CPanel::RefreshListCtrl(const UString &focusedName, int focusedPos, bool selectFocused,
     const UStringVector &selectedNames)
 {
+printf("CPanel::RefreshListCtrl\n");
   _dontShowMode = false;
   LoadFullPathAndShow();
   // OutputDebugStringA("=======\n");
@@ -341,8 +349,12 @@ HRESULT CPanel::RefreshListCtrl(const UString &focusedName, int focusedPos, bool
   _listView.SetRedraw(false);
   // m_RedrawEnabled = false;
 
+#ifdef _WIN32
   LVITEMW item;
   ZeroMemory(&item, sizeof(item));
+#else
+  LVITEMW item = { 0 };
+#endif
   
   // DWORD tickCount0 = GetTickCount();
   _enableItemChangeNotify = false;
@@ -366,7 +378,7 @@ HRESULT CPanel::RefreshListCtrl(const UString &focusedName, int focusedPos, bool
     SetToRootFolder();
   }
   
-  _headerToolBar.EnableButton(kParentFolderID, !IsRootFolder());
+  // FIXME _headerToolBar.EnableButton(kParentFolderID, !IsRootFolder());
 
   {
     CMyComPtr<IFolderSetFlatMode> folderSetFlatMode;
@@ -547,8 +559,8 @@ HRESULT CPanel::RefreshListCtrl(const UString &focusedName, int focusedPos, bool
     else
     */
     {
-      // item.pszText = const_cast<wchar_t *>((const wchar_t *)name);
-      item.pszText = LPSTR_TEXTCALLBACKW;
+      //
+item.pszText = const_cast<wchar_t *>((const wchar_t *)name); // FIXME item.pszText = LPSTR_TEXTCALLBACKW;
       /* LPSTR_TEXTCALLBACKW works, but in some cases there are problems,
       since we block notify handler. */
     }
@@ -590,6 +602,21 @@ HRESULT CPanel::RefreshListCtrl(const UString &focusedName, int focusedPos, bool
 
     if (_listView.InsertItem(&item) == -1)
       return E_FAIL;
+
+    // FIXME Added
+    item.pszText = (LPWSTR)malloc(4096); // FIXME
+    for(int col=1;col <  _listView.GetColumnCount(); col++)
+    {
+      item.iSubItem = col;
+      item.cchTextMax = 4096 / sizeof(item.pszText[0]);
+      this->SetItemText(item);
+      _listView.SetItem(&item);
+    }
+    free(item.pszText); item.pszText = 0;
+
+
+
+
     listViewItemCount++;
   }
   // OutputDebugStringA("End2\n");
@@ -598,7 +625,7 @@ HRESULT CPanel::RefreshListCtrl(const UString &focusedName, int focusedPos, bool
     SetFocusedSelectedItem(cursorIndex, selectFocused);
   // DWORD tickCount3 = GetTickCount();
   SetSortRawStatus();
-  _listView.SortItems(CompareItems, (LPARAM)this);
+  _listView.SortItems(CompareItems_WX, (LPARAM)this);
   // DWORD tickCount4 = GetTickCount();
   if (cursorIndex < 0 && _listView.GetItemCount() > 0)
   {
@@ -976,7 +1003,7 @@ void CPanel::SaveListViewInfo()
   }
 }
 
-
+#ifdef _WIN32
 bool CPanel::OnRightClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActiveate, LRESULT &result)
 {
   if (itemActiveate->hdr.hwndFrom == HWND(_listView))
@@ -1043,6 +1070,7 @@ void CPanel::ShowColumnsContextMenu(int x, int y)
     }
   }
 }
+#endif
 
 void CPanel::OnReload()
 {

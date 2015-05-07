@@ -81,9 +81,10 @@ STDMETHODIMP CArchiveFolderManager::GetExtensions(BSTR *extensions)
 
 STDMETHODIMP CArchiveFolderManager::GetIconPath(const wchar_t *ext, BSTR *iconPath, Int32 *iconIndex)
 {
-  LoadFormats();
   *iconPath = 0;
   *iconIndex = 0;
+#ifdef _WIN32
+  LoadFormats();
   FOR_VECTOR (i, _codecs->Libs)
   {
     const CCodecLib &lib = _codecs->Libs[i];
@@ -104,6 +105,7 @@ STDMETHODIMP CArchiveFolderManager::GetIconPath(const wchar_t *ext, BSTR *iconPa
       return StringToBstr(fs2us(path), iconPath);
     }
   }
+#endif
   return S_OK;
 }
 

@@ -3,7 +3,7 @@
 #ifndef __FILE_STREAMS_H
 #define __FILE_STREAMS_H
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(ENV_UNIX)
 #define USE_WIN_FILE
 #endif
 
@@ -22,12 +22,13 @@
 class CInFileStream:
   public IInStream,
   public IStreamGetSize,
-  #ifdef USE_WIN_FILE
+  #if 0 // #ifdef USE_WIN_FILE
   public IStreamGetProps,
   public IStreamGetProps2,
   #endif
   public CMyUnknownImp
 {
+  bool _ignoreSymbolicLink;
 public:
   #ifdef USE_WIN_FILE
   NWindows::NFile::NIO::CInFile File;
@@ -46,25 +47,22 @@ public:
 
   bool SupportHardLinks;
   
+  CInFileStream(bool b=false) { _ignoreSymbolicLink = b; }
   virtual ~CInFileStream();
 
-  #ifdef SUPPORT_DEVICE_FILE
-  CInFileStream();
-  #endif
-  
   bool Open(CFSTR fileName)
   {
-    return File.Open(fileName);
+    return File.Open(fileName,_ignoreSymbolicLink);
   }
   
-  bool OpenShared(CFSTR fileName, bool shareForWrite)
+  bool OpenShared(CFSTR fileName , bool /* shareForWrite */ )
   {
-    return File.OpenShared(fileName, shareForWrite);
+    return File.Open(fileName,_ignoreSymbolicLink);
   }
 
   MY_QUERYINTERFACE_BEGIN2(IInStream)
   MY_QUERYINTERFACE_ENTRY(IStreamGetSize)
-  #ifdef USE_WIN_FILE
+  #if 0 // #ifdef USE_WIN_FILE
   MY_QUERYINTERFACE_ENTRY(IStreamGetProps)
   MY_QUERYINTERFACE_ENTRY(IStreamGetProps2)
   #endif
@@ -75,7 +73,7 @@ public:
   STDMETHOD(Seek)(Int64 offset, UInt32 seekOrigin, UInt64 *newPosition);
 
   STDMETHOD(GetSize)(UInt64 *size);
-  #ifdef USE_WIN_FILE
+  #if 0 // #ifdef USE_WIN_FILE
   STDMETHOD(GetProps)(UInt64 *size, FILETIME *cTime, FILETIME *aTime, FILETIME *mTime, UInt32 *attrib);
   STDMETHOD(GetProps2)(CStreamFileProps *props);
   #endif

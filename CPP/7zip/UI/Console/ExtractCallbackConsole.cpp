@@ -23,7 +23,7 @@
 
 using namespace NWindows;
 using namespace NFile;
-using namespace NDir;
+// FIXME using namespace NDir;
 
 static const char *kTestString    =  "Testing     ";
 static const char *kExtractString =  "Extracting  ";

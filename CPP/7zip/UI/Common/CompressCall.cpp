@@ -2,6 +2,19 @@
 
 #include "StdAfx.h"
 
+// For compilers that support precompilation, includes "wx/wx.h".
+#include "wx/wxprec.h"
+
+#ifdef __BORLANDC__
+#pragma hdrstop
+#endif
+
+#ifndef WX_PRECOMP
+#include "wx/wx.h"
+#endif
+
+#undef _WIN32
+
 #include "../../../Common/IntToString.h"
 #include "../../../Common/MyCom.h"
 #include "../../../Common/Random.h"
@@ -10,8 +23,8 @@
 #include "../../../Windows/DLL.h"
 #include "../../../Windows/ErrorMsg.h"
 #include "../../../Windows/FileDir.h"
-#include "../../../Windows/FileMapping.h"
-#include "../../../Windows/ProcessUtils.h"
+// #include "../../../Windows/FileMapping.h"
+// #include "../../../Windows/ProcessUtils.h"
 #include "../../../Windows/Synchronization.h"
 
 #include "../FileManager/RegistryUtils.h"
@@ -63,6 +76,7 @@ static HRESULT MyCreateProcess(LPCWSTR imageName, const UString &params,
     bool waitFinish,
     NSynchronization::CBaseEvent *event)
 {
+#ifdef _WIN32
   CProcess process;
   WRes res = process.Create(imageName, params, NULL); // curDir);
   if (res != 0)
@@ -77,6 +91,57 @@ static HRESULT MyCreateProcess(LPCWSTR imageName, const UString &params,
     HANDLE handles[] = { process, *event };
     ::WaitForMultipleObjects(ARRAY_SIZE(handles), handles, FALSE, INFINITE);
   }
+#else
+	printf("MyCreateProcess: waitFinish=%d event=%p\n",(unsigned)waitFinish,event);
+	printf("\timageName : %ls\n",(const wchar_t*)imageName);
+	printf("\tparams : %ls\n",(const wchar_t*)params);
+	// printf("\tcurDir : %ls\n",(const wchar_t*)curDir);
+
+	wxString cmd;
+	cmd = (const wchar_t*)imageName;
+	cmd += L" ";
+	cmd += (const wchar_t*)params;
+	wxString memoCurDir = wxGetCwd();
+
+/*
+	if (curDir) {  // FIXME
+		wxSetWorkingDirectory(wxString(curDir));
+
+
+		// under MacOSX, a bundle does not keep the current directory
+		// between 7zFM and 7zG ...
+		// So, try to use the environment variable P7ZIP_CURRENT_DIR
+
+		char p7zip_current_dir[MAX_PATH];
+
+		AString aCurPath = GetAnsiString(curDir);
+
+		const char *dir2 = nameWindowToUnix((const char *)aCurPath);
+
+		snprintf(p7zip_current_dir,sizeof(p7zip_current_dir),"P7ZIP_CURRENT_DIR=%s/",dir2);
+
+		p7zip_current_dir[sizeof(p7zip_current_dir)-1] = 0;
+
+		putenv(p7zip_current_dir);
+
+		printf("putenv(%s)\n",p7zip_current_dir);
+
+	}
+*/
+
+	printf("MyCreateProcess: cmd='%ls'\n",(const wchar_t *)cmd);
+	long pid = 0;
+	if (waitFinish) pid = wxExecute(cmd, wxEXEC_SYNC); // FIXME process never ends and stays zombie ...
+	else            pid = wxExecute(cmd, wxEXEC_ASYNC);
+
+//	if (curDir) wxSetWorkingDirectory(memoCurDir);
+
+
+	// FIXME if (pid == 0) return E_FAIL;
+
+	return S_OK;
+
+#endif
   return S_OK;
 }
 
@@ -88,7 +153,11 @@ static void AddLagePagesSwitch(UString &params)
 
 static UString Get7zGuiPath()
 {
+#ifdef _WIN32
   return fs2us(NWindows::NDLL::GetModuleDirPrefix()) + L"7zG.exe";
+#else
+  return fs2us(NWindows::NDLL::GetModuleDirPrefix()) + L"7zG";
+#endif
 }
 
 class CRandNameGenerator
@@ -104,6 +173,7 @@ public:
   }
 };
 
+#ifdef _WIN32
 static HRESULT CreateMap(const UStringVector &names,
     CFileMapping &fileMapping, NSynchronization::CManualResetEvent &event,
     UString &params)
@@ -112,7 +182,7 @@ static HRESULT CreateMap(const UStringVector &names,
   FOR_VECTOR (i, names)
     totalSize += (names[i].Len() + 1);
   totalSize *= sizeof(wchar_t);
-  
+
   CRandNameGenerator random;
 
   UString mappingName;
@@ -127,7 +197,7 @@ static HRESULT CreateMap(const UStringVector &names,
       return res;
     fileMapping.Close();
   }
-  
+
   UString eventName;
   for (;;)
   {
@@ -146,7 +216,7 @@ static HRESULT CreateMap(const UStringVector &names,
   wchar_t temp[16];
   ConvertUInt32ToString(totalSize, temp);
   params += temp;
-  
+
   params += L':';
   params += eventName;
 
@@ -167,6 +237,7 @@ static HRESULT CreateMap(const UStringVector &names,
   }
   return S_OK;
 }
+#endif
 
 HRESULT CompressFiles(
     const UString &arcPathPrefix,
@@ -178,11 +249,31 @@ HRESULT CompressFiles(
 {
   MY_TRY_BEGIN
   UString params = L'a';
-  
+
+#ifdef _WIN32
   CFileMapping fileMapping;
-  NSynchronization::CManualResetEvent event;
   params += kIncludeSwitch;
   RINOK(CreateMap(names, fileMapping, event, params));
+#else
+  NSynchronization::CManualResetEvent event;
+  char tempFile[256];
+  static int count = 1000;
+
+  sprintf(tempFile,"/tmp/7zCompress_%d_%d.tmp",(int)getpid(),count++);
+
+  FILE * file = fopen(tempFile,"w");
+  if (file)
+  {
+    for (int i = 0; i < names.Size(); i++) {
+	  fprintf(file,"%ls\n",(const wchar_t *)names[i]);
+	  printf(" TMP_%d : '%ls'\n",i,(const wchar_t *)names[i]);
+   }
+
+    fclose(file);
+  }
+  params += L" -i@";
+  params += GetUnicodeString(tempFile);
+#endif
 
   if (!arcType.IsEmpty())
   {
@@ -208,7 +299,7 @@ HRESULT CompressFiles(
 
   params += kStopSwitchParsing;
   params += L' ';
-  
+
   if (!arcName.IsEmpty())
   {
     params += GetQuotedString(
@@ -217,24 +308,55 @@ HRESULT CompressFiles(
     // #endif
     arcName);
   }
-  
+
   return MyCreateProcess(Get7zGuiPath(), params,
       // (arcPathPrefix.IsEmpty()? 0: (LPCWSTR)arcPathPrefix),
       waitFinish, &event);
   MY_TRY_FINISH
+
 }
 
 static void ExtractGroupCommand(const UStringVector &arcPaths, UString &params, bool isHash)
 {
   AddLagePagesSwitch(params);
   params += isHash ? kHashIncludeSwitches : kArcIncludeSwitches;
+
+#ifdef _WIN32
   CFileMapping fileMapping;
   NSynchronization::CManualResetEvent event;
   HRESULT result = CreateMap(arcPaths, fileMapping, event, params);
+
   if (result == S_OK)
     result = MyCreateProcess(Get7zGuiPath(), params, false, &event);
   if (result != S_OK)
     ErrorMessageHRESULT(result);
+#else
+  char tempFile[256];
+  static int count = 1000;
+
+  sprintf(tempFile,"/tmp/7zExtract_%d_%d.tmp",(int)getpid(),count++);
+
+  FILE * file = fopen(tempFile,"w");
+  if (file)
+  {
+    for (int i = 0; i <  arcPaths.Size(); i++) {
+	  fprintf(file,"%ls\n",(const wchar_t *)arcPaths[i]);
+	  printf(" TMP_%d : '%ls'\n",i,(const wchar_t *)arcPaths[i]);
+    }
+
+    fclose(file);
+  }
+  params += L" -ai@";
+  params += GetUnicodeString(tempFile);
+  printf("ExtractGroupCommand : -%ls-\n",(const wchar_t *)params);
+  HRESULT result = MyCreateProcess(Get7zGuiPath(),params, true, /* &event FIXME */ 0);
+  printf("ExtractGroupCommand : END\n");
+  remove(tempFile);
+
+  if (result != S_OK)
+    ErrorMessageHRESULT(result);
+
+#endif
 }
 
 void ExtractArchives(const UStringVector &arcPaths, const UString &outFolder, bool showDialog, bool elimDup)

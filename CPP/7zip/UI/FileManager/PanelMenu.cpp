@@ -48,6 +48,8 @@ void CPanel::InvokeSystemCommand(const char *command)
   ci.hwnd = GetParent();
   ci.lpVerb = command;
   contextMenu->InvokeCommand(&ci);
+#else
+  printf(" WARNING CPanel::InvokeSystemCommand(%s)\n",command);
 #endif
 }
 
@@ -643,10 +645,6 @@ bool CPanel::InvokePluginCommand(int id)
   return InvokePluginCommand(id, _sevenZipContextMenu, _systemContextMenu);
 }
 
-#if defined(_MSC_VER) && !defined(UNDER_CE)
-#define use_CMINVOKECOMMANDINFOEX
-#endif
-
 bool CPanel::InvokePluginCommand(int id,
     IContextMenu *sevenZipContextMenu, IContextMenu *systemContextMenu)
 {
@@ -657,7 +655,7 @@ bool CPanel::InvokePluginCommand(int id,
   else
     offset = id  - kSevenZipStartMenuID;
 
-  #ifndef use_CMINVOKECOMMANDINFOEXR
+  #ifdef UNDER_CE
   CMINVOKECOMMANDINFO
   #else
   CMINVOKECOMMANDINFOEX
@@ -666,7 +664,7 @@ bool CPanel::InvokePluginCommand(int id,
   memset(&commandInfo, 0, sizeof(commandInfo));
   commandInfo.cbSize = sizeof(commandInfo);
   commandInfo.fMask = 0
-  #ifdef use_CMINVOKECOMMANDINFOEXR
+  #ifndef UNDER_CE
   | CMIC_MASK_UNICODE
   #endif
   ;
@@ -676,7 +674,7 @@ bool CPanel::InvokePluginCommand(int id,
   CSysString currentFolderSys = GetSystemString(_currentFolderPrefix);
   commandInfo.lpDirectory = (LPCSTR)(LPCTSTR)(currentFolderSys);
   commandInfo.nShow = SW_SHOW;
-  #ifdef use_CMINVOKECOMMANDINFOEXR
+  #ifndef UNDER_CE
   commandInfo.lpParametersW = NULL;
   commandInfo.lpTitle = "";
   commandInfo.lpVerbW = (LPCWSTR)(MAKEINTRESOURCEW(offset));

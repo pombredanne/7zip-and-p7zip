@@ -234,7 +234,7 @@ STDMETHODIMP CArchiveUpdateCallback::GetRawProp(UInt32 index, PROPID propID, con
         // propID == kpidNtReparse
         if (!StoreSymLinks)
           return S_OK;
-        #ifndef UNDER_CE
+        #if 0 // #ifndef UNDER_CE
         const CByteBuffer *buf = &di.ReparseData2;
         if (buf->Size() == 0)
           buf = &di.ReparseData;
@@ -324,7 +324,7 @@ STDMETHODIMP CArchiveUpdateCallback::GetProperty(UInt32 index, PROPID propID, PR
       }
       if (up.DirIndex >= 0)
       {
-        #ifndef UNDER_CE
+        #if 0 // #ifndef UNDER_CE
         const CDirItem &di = DirItems->Items[up.DirIndex];
         // if (di.IsDir())
         {
@@ -484,6 +484,7 @@ STDMETHODIMP CArchiveUpdateCallback::GetStream(UInt32 index, ISequentialInStream
       return Callback->OpenFileError(path, ::GetLastError());
     }
 
+#if 0 // FIXME
     if (StoreHardLinks)
     {
       CStreamFileProps props;
@@ -508,6 +509,7 @@ STDMETHODIMP CArchiveUpdateCallback::GetStream(UInt32 index, ISequentialInStream
         }
       }
     }
+#endif
 
     if (ProcessedItemsStatuses)
     {

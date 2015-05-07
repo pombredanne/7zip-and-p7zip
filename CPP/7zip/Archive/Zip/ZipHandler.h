@@ -60,7 +60,11 @@ private:
     _props.Init();
     m_MainMethod = -1;
     m_ForceAesMode = false;
+#ifdef _WIN32
     m_WriteNtfsTimeExtra = true;
+#else
+    m_WriteNtfsTimeExtra = false;
+#endif
     _removeSfxBlock = false;
     m_ForceLocal = false;
     m_ForceUtf8 = false;

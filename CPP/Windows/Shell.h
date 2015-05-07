@@ -6,9 +6,8 @@
 #include <windows.h>
 // #include <shlobj.h>
 
-#include "../Common/MyString.h"
-
-#include "Defs.h"
+#include "Common/MyString.h"
+#include "Windows/Defs.h"
 
 
 namespace NWindows{

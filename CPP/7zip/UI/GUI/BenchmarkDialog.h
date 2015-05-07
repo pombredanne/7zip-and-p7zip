@@ -101,6 +101,7 @@ public:
   void WaitCreating() { _startEvent.Lock(); }
 };
 
+#ifdef _WIN32
 struct CMyFont
 {
   HFONT _font;
@@ -115,6 +116,12 @@ struct CMyFont
     _font = CreateFontIndirect(lplf);
   }
 };
+#else
+struct CMyFont
+{
+  CMyFont() {}
+};
+#endif
 
 
 class CBenchmarkDialog:

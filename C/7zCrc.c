@@ -60,8 +60,10 @@ void MY_FAST_CALL CrcGenerateTable()
   g_CrcUpdate = CrcUpdateT4;
   
   #if CRC_NUM_TABLES == 8
+  #ifdef P7ZIP_USE_ASM
   if (!CPU_Is_InOrder())
     g_CrcUpdate = CrcUpdateT8;
+  #endif
   #endif
 
   #else

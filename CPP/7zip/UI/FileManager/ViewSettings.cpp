@@ -132,6 +132,7 @@ struct CPanelsInfo
 static const UInt32 kWindowPositionHeaderSize = 5 * 4;
 static const UInt32 kPanelsInfoHeaderSize = 3 * 4;
 
+#ifdef _WIN32
 void CWindowInfo::Save() const
 {
   NSynchronization::CCriticalSectionLock lock(g_CS);
@@ -188,6 +189,7 @@ void CWindowInfo::Read(bool &windowPosDefined, bool &panelInfoDefined)
   }
   return;
 }
+#endif
 
 
 void SaveUi32Val(const TCHAR *name, UInt32 value)

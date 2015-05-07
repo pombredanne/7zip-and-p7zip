@@ -1,199 +1,103 @@
 // Windows/FileIO.h
 
-#ifndef __WINDOWS_FILE_IO_H
-#define __WINDOWS_FILE_IO_H
+#ifndef __WINDOWS_FILEIO_H
+#define __WINDOWS_FILEIO_H
 
-#if defined(_WIN32) && !defined(UNDER_CE)
-#include <winioctl.h>
+#include <Common/MyString.h>
+
+#ifndef _WIN32
+
+#define FILE_SHARE_READ	1
+#define FILE_SHARE_WRITE 2
+
+#define FILE_BEGIN	SEEK_SET
+#define FILE_CURRENT	SEEK_CUR
+#define FILE_END	SEEK_END
+#define INVALID_SET_FILE_POINTER	((DWORD)-1)
+
 #endif
-
-#include "../Common/MyString.h"
-#include "../Common/MyBuffer.h"
-
-#include "Defs.h"
-
-#define _my_IO_REPARSE_TAG_MOUNT_POINT  (0xA0000003L)
-#define _my_IO_REPARSE_TAG_SYMLINK      (0xA000000CL)
-
-#define _my_SYMLINK_FLAG_RELATIVE 1
-
-#define my_FSCTL_SET_REPARSE_POINT  CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFERED, FILE_SPECIAL_ACCESS) // REPARSE_DATA_BUFFER
-#define my_FSCTL_GET_REPARSE_POINT  CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 42, METHOD_BUFFERED, FILE_ANY_ACCESS)     // REPARSE_DATA_BUFFER
 
 namespace NWindows {
 namespace NFile {
-
-#if defined(_WIN32) && !defined(UNDER_CE)
-bool FillLinkData(CByteBuffer &dest, const wchar_t *path, bool isSymLink);
-#endif
-
-struct CReparseShortInfo
-{
-  unsigned Offset;
-  unsigned Size;
-
-  bool Parse(const Byte *p, size_t size);
-};
-
-struct CReparseAttr
-{
-  UInt32 Tag;
-  UInt32 Flags;
-  UString SubsName;
-  UString PrintName;
-
-  CReparseAttr(): Tag(0), Flags(0) {}
-  bool Parse(const Byte *p, size_t size);
-
-  bool IsMountPoint() const { return Tag == _my_IO_REPARSE_TAG_MOUNT_POINT; } // it's Junction
-  bool IsSymLink() const { return Tag == _my_IO_REPARSE_TAG_SYMLINK; }
-  bool IsRelative() const { return Flags == _my_SYMLINK_FLAG_RELATIVE; }
-  // bool IsVolume() const;
-
-  bool IsOkNamePair() const;
-  UString GetPath() const;
-};
-
 namespace NIO {
 
-bool GetReparseData(CFSTR path, CByteBuffer &reparseData, BY_HANDLE_FILE_INFORMATION *fileInfo = NULL);
-bool SetReparseData(CFSTR path, bool isDir, const void *data, DWORD size);
 
 class CFileBase
 {
 protected:
-  HANDLE _handle;
-  
-  bool Create(CFSTR path, DWORD desiredAccess,
-      DWORD shareMode, DWORD creationDisposition, DWORD flagsAndAttributes);
-
-public:
-
-  bool DeviceIoControl(DWORD controlCode, LPVOID inBuffer, DWORD inSize,
-      LPVOID outBuffer, DWORD outSize, LPDWORD bytesReturned, LPOVERLAPPED overlapped = NULL) const
-  {
-    return BOOLToBool(::DeviceIoControl(_handle, controlCode, inBuffer, inSize,
-        outBuffer, outSize, bytesReturned, overlapped));
-  }
-
-  bool DeviceIoControlOut(DWORD controlCode, LPVOID outBuffer, DWORD outSize, LPDWORD bytesReturned) const
-  {
-    return DeviceIoControl(controlCode, NULL, 0, outBuffer, outSize, bytesReturned);
-  }
-
-  bool DeviceIoControlOut(DWORD controlCode, LPVOID outBuffer, DWORD outSize) const
-  {
-    DWORD bytesReturned;
-    return DeviceIoControlOut(controlCode, outBuffer, outSize, &bytesReturned);
-  }
-
-public:
-  #ifdef SUPPORT_DEVICE_FILE
-  bool IsDeviceFile;
-  bool SizeDefined;
-  UInt64 Size; // it can be larger than real available size
-  #endif
-
-  CFileBase(): _handle(INVALID_HANDLE_VALUE) {};
-  ~CFileBase() { Close(); }
-
-  bool Close() throw();
-
-  bool GetPosition(UInt64 &position) const throw();
-  bool GetLength(UInt64 &length) const throw();
-
-  bool Seek(Int64 distanceToMove, DWORD moveMethod, UInt64 &newPosition) const throw();
-  bool Seek(UInt64 position, UInt64 &newPosition) const throw();
-  bool SeekToBegin() const throw();
-  bool SeekToEnd(UInt64 &newPosition) const throw();
-  
-  bool GetFileInformation(BY_HANDLE_FILE_INFORMATION *info) const
-    { return BOOLToBool(GetFileInformationByHandle(_handle, info)); }
-
-  static bool GetFileInformation(CFSTR path, BY_HANDLE_FILE_INFORMATION *info)
-  {
-    NIO::CFileBase file;
-    if (!file.Create(path, 0, FILE_SHARE_READ, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS))
-      return false;
-    return file.GetFileInformation(info);
-  }
-};
-
-#ifndef UNDER_CE
-#define IOCTL_CDROM_BASE  FILE_DEVICE_CD_ROM
-#define IOCTL_CDROM_GET_DRIVE_GEOMETRY  CTL_CODE(IOCTL_CDROM_BASE, 0x0013, METHOD_BUFFERED, FILE_READ_ACCESS)
-// #define IOCTL_CDROM_MEDIA_REMOVAL  CTL_CODE(IOCTL_CDROM_BASE, 0x0201, METHOD_BUFFERED, FILE_READ_ACCESS)
-
-// IOCTL_DISK_GET_DRIVE_GEOMETRY_EX works since WinXP
-#define my_IOCTL_DISK_GET_DRIVE_GEOMETRY_EX  CTL_CODE(IOCTL_DISK_BASE, 0x0028, METHOD_BUFFERED, FILE_ANY_ACCESS)
-
-struct my_DISK_GEOMETRY_EX
-{
-  DISK_GEOMETRY Geometry;
-  LARGE_INTEGER DiskSize;
-  BYTE Data[1];
-};
+  int     _fd;
+  AString _unix_filename;
+  time_t   _lastAccessTime;
+  time_t   _lastWriteTime;
+#ifdef ENV_HAVE_LSTAT
+  int     _size;
+  char    _buffer[MAX_PATHNAME_LEN+1];
+  int     _offset;
 #endif
+
+  bool Create(LPCSTR fileName, DWORD desiredAccess,
+      DWORD shareMode, DWORD creationDisposition,  DWORD flagsAndAttributes,bool ignoreSymbolicLink=false);
+  bool Create(LPCWSTR fileName, DWORD desiredAccess,
+      DWORD shareMode, DWORD creationDisposition,  DWORD flagsAndAttributes,bool ignoreSymbolicLink=false);
+
+public:
+  CFileBase(): _fd(-1) {};
+  virtual ~CFileBase();
+
+  virtual bool Close();
+
+  bool GetLength(UINT64 &length) const;
+
+  bool Seek(INT64 distanceToMove, DWORD moveMethod, UINT64 &newPosition);
+  bool Seek(UINT64 position, UINT64 &newPosition);
+};
 
 class CInFile: public CFileBase
 {
-  #ifdef SUPPORT_DEVICE_FILE
-
-  #ifndef UNDER_CE
-  
-  bool GetGeometry(DISK_GEOMETRY *res) const
-    { return DeviceIoControlOut(IOCTL_DISK_GET_DRIVE_GEOMETRY, res, sizeof(*res)); }
-
-  bool GetGeometryEx(my_DISK_GEOMETRY_EX *res) const
-    { return DeviceIoControlOut(my_IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, res, sizeof(*res)); }
-
-  bool GetCdRomGeometry(DISK_GEOMETRY *res) const
-    { return DeviceIoControlOut(IOCTL_CDROM_GET_DRIVE_GEOMETRY, res, sizeof(*res)); }
-  
-  bool GetPartitionInfo(PARTITION_INFORMATION *res)
-    { return DeviceIoControlOut(IOCTL_DISK_GET_PARTITION_INFO, LPVOID(res), sizeof(*res)); }
-  
-  #endif
-
-  void CorrectDeviceSize();
-  void CalcDeviceSize(CFSTR name);
-  
-  #endif
-
 public:
-  bool Open(CFSTR fileName, DWORD shareMode, DWORD creationDisposition, DWORD flagsAndAttributes);
-  bool OpenShared(CFSTR fileName, bool shareForWrite);
-  bool Open(CFSTR fileName);
-
-  #ifndef UNDER_CE
-
-  bool OpenReparse(CFSTR fileName)
-  {
-    return Open(fileName, FILE_SHARE_READ, OPEN_EXISTING,
-        FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS);
+  bool Open(LPCTSTR fileName, DWORD shareMode, DWORD creationDisposition,  DWORD flagsAndAttributes);
+  bool OpenShared(LPCTSTR fileName, bool /* shareForWrite */ ,bool ignoreSymbolicLink=false) {
+    return Open(fileName,ignoreSymbolicLink);
   }
-  
+  bool Open(LPCTSTR fileName,bool ignoreSymbolicLink=false);
+  #ifndef _UNICODE
+  bool Open(LPCWSTR fileName, DWORD shareMode, DWORD creationDisposition,  DWORD flagsAndAttributes);
+  bool OpenShared(LPCWSTR fileName, bool /* shareForWrite */ ,bool ignoreSymbolicLink=false) {
+    return Open(fileName,ignoreSymbolicLink);
+  }
+  bool Open(LPCWSTR fileName,bool ignoreSymbolicLink=false);
   #endif
-
-  bool Read1(void *data, UInt32 size, UInt32 &processedSize) throw();
-  bool ReadPart(void *data, UInt32 size, UInt32 &processedSize) throw();
-  bool Read(void *data, UInt32 size, UInt32 &processedSize) throw();
+  bool ReadPart(void *data, UINT32 size, UINT32 &processedSize);
+  bool Read(void *data, UINT32 size, UINT32 &processedSize);
 };
 
 class COutFile: public CFileBase
 {
 public:
-  bool Open(CFSTR fileName, DWORD shareMode, DWORD creationDisposition, DWORD flagsAndAttributes);
-  bool Open(CFSTR fileName, DWORD creationDisposition);
-  bool Create(CFSTR fileName, bool createAlways);
-  bool CreateAlways(CFSTR fileName, DWORD flagsAndAttributes);
+  bool Open(LPCTSTR fileName, DWORD shareMode, DWORD creationDisposition, DWORD flagsAndAttributes);
+  bool Open(LPCTSTR fileName, DWORD creationDisposition);
+  bool Create(LPCTSTR fileName, bool createAlways);
+  bool CreateAlways(LPCTSTR fileName, DWORD flagsAndAttributes);
 
-  bool SetTime(const FILETIME *cTime, const FILETIME *aTime, const FILETIME *mTime) throw();
-  bool SetMTime(const FILETIME *mTime) throw();
-  bool WritePart(const void *data, UInt32 size, UInt32 &processedSize) throw();
-  bool Write(const void *data, UInt32 size, UInt32 &processedSize) throw();
-  bool SetEndOfFile() throw();
-  bool SetLength(UInt64 length) throw();
+  #ifndef _UNICODE
+  bool Open(LPCWSTR fileName, DWORD shareMode, DWORD creationDisposition, DWORD flagsAndAttributes);
+  bool Open(LPCWSTR fileName, DWORD creationDisposition);
+  bool Create(LPCWSTR fileName, bool createAlways);
+  #endif
+
+  /*
+  void SetOpenCreationDisposition(DWORD creationDisposition)
+    { m_CreationDisposition = creationDisposition; }
+  void SetOpenCreationDispositionCreateAlways()
+    { m_CreationDisposition = CREATE_ALWAYS; }
+  */
+
+  bool SetTime(const FILETIME *cTime, const FILETIME *aTime, const FILETIME *mTime);
+  bool SetMTime(const FILETIME *mTime);
+  bool WritePart(const void *data, UINT32 size, UINT32 &processedSize);
+  bool Write(const void *data, UINT32 size, UINT32 &processedSize);
+  bool SetEndOfFile();
+  bool SetLength(UINT64 length);
 };
 
 }}}

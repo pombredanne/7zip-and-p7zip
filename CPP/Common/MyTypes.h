@@ -7,6 +7,7 @@
 
 typedef int HRes;
 
+#ifdef __cplusplus
 struct CBoolPair
 {
   bool Val;
@@ -26,5 +27,6 @@ struct CBoolPair
     Def = true;
   }
 };
+#endif
 
 #endif

@@ -124,6 +124,7 @@ int CALLBACK CompareItems2(LPARAM lParam1, LPARAM lParam2, LPARAM lpData)
       return 1;
     if (propType1 != NPropDataType::kRaw) return 0;
     if (propType2 != NPropDataType::kRaw) return 0;
+#ifdef _WIN32
     if (propID == kpidNtReparse)
     {
       NFile::CReparseShortInfo r1; r1.Parse((const Byte *)data1, dataSize1);
@@ -132,6 +133,7 @@ int CALLBACK CompareItems2(LPARAM lParam1, LPARAM lParam2, LPARAM lpData)
           (const Byte *)data1 + r1.Offset, r1.Size,
           (const Byte *)data2 + r2.Offset, r2.Size);
     }
+#endif
   }
 
   if (panel->_folderCompare)
@@ -205,6 +207,15 @@ int CALLBACK CompareItems(LPARAM lParam1, LPARAM lParam2, LPARAM lpData)
   return panel->_ascending ? result: (-result);
 }
 
+int 
+#if defined(__WIN32__) && !defined(__WXMICROWIN__) // FIXME
+  wxCALLBACK
+#endif
+ CompareItems_WX(long item1, long item2, long sortData)
+{
+        return CompareItems(item1,item2,sortData);
+}
+
 
 /*
 void CPanel::SortItems(int index)
@@ -256,7 +267,11 @@ void CPanel::SortItemsWithPropID(PROPID propID)
     }
   }
   SetSortRawStatus();
-  _listView.SortItems(CompareItems, (LPARAM)this);
+  if (sizeof(long) != sizeof(LPARAM)) {
+    printf("INTERNAL ERROR : sizeof(long) != sizeof(LPARAM)\n");
+    exit(-1);
+  }
+  _listView.SortItems(CompareItems_WX, (LPARAM)this); // FIXED _listView.SortItems(CompareItems, (LPARAM)this);
   _listView.EnsureVisible(_listView.GetFocusedItem(), false);
 }
 

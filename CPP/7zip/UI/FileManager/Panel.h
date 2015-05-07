@@ -11,16 +11,16 @@
 #include "../../../Windows/DLL.h"
 #include "../../../Windows/FileDir.h"
 #include "../../../Windows/FileFind.h"
-#include "../../../Windows/Handle.h"
+// #include "../../../Windows/Handle.h"
 #include "../../../Windows/Synchronization.h"
 
 #include "../../../Windows/Control/ComboBox.h"
 #include "../../../Windows/Control/Edit.h"
 #include "../../../Windows/Control/ListView.h"
-#include "../../../Windows/Control/ReBar.h"
+// #include "../../../Windows/Control/ReBar.h"
 #include "../../../Windows/Control/Static.h"
 #include "../../../Windows/Control/StatusBar.h"
-#include "../../../Windows/Control/ToolBar.h"
+// #include "../../../Windows/Control/ToolBar.h"
 #include "../../../Windows/Control/Window2.h"
 
 #include "../../Archive/IArchive.h"
@@ -29,7 +29,7 @@
 
 #include "AppState.h"
 #include "IFolder.h"
-#include "MyCom2.h"
+// #include "MyCom2.h"
 #include "ProgressDialog2.h"
 #include "SysIconUtils.h"
 
@@ -230,7 +230,7 @@ class CPanel: public NWindows::NControl::CWindow2
   bool OnCommand(int code, int itemID, LPARAM lParam, LRESULT &result);
   LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
   virtual bool OnCreate(CREATESTRUCT *createStruct);
-  virtual bool OnSize(WPARAM wParam, int xSize, int ySize);
+  // FIXME virtual bool OnSize(WPARAM wParam, int xSize, int ySize);
   virtual void OnDestroy();
   virtual bool OnNotify(UINT controlID, LPNMHDR lParam, LRESULT &result);
 
@@ -253,12 +253,14 @@ class CPanel: public NWindows::NControl::CWindow2
   void OnItemChanged(NMLISTVIEW *item);
   void OnNotifyActivateItems();
   bool OnNotifyList(LPNMHDR lParam, LRESULT &result);
+/*
   void OnDrag(LPNMLISTVIEW nmListView);
   bool OnKeyDown(LPNMLVKEYDOWN keyDownInfo, LRESULT &result);
   BOOL OnBeginLabelEdit(LV_DISPINFOW * lpnmh);
   BOOL OnEndLabelEdit(LV_DISPINFOW * lpnmh);
+*/  
   void OnColumnClick(LPNMLISTVIEW info);
-  bool OnCustomDraw(LPNMLVCUSTOMDRAW lplvcd, LRESULT &result);
+  // bool OnCustomDraw(LPNMLVCUSTOMDRAW lplvcd, LRESULT &result);
 
 
 public:
@@ -305,8 +307,8 @@ private:
   // CRecordVector<PROPID> m_ColumnsPropIDs;
 
 public:
-  NWindows::NControl::CReBar _headerReBar;
-  NWindows::NControl::CToolBar _headerToolBar;
+  // NWindows::NControl::CReBar _headerReBar;
+  // NWindows::NControl::CToolBar _headerToolBar;
   NWindows::NControl::
     #ifdef UNDER_CE
     CComboBox
@@ -482,8 +484,10 @@ public:
 
   void SetExtendedStyle()
   {
+/* FIXME
     if (_listView != 0)
       _listView.SetExtendedListViewStyle(_exStyle);
+*/
   }
 
 
@@ -502,14 +506,15 @@ public:
 
   void Release();
   ~CPanel();
-  void OnLeftClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActivate);
-  bool OnRightClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActivate, LRESULT &result);
+  // void OnLeftClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActivate);
+  // bool OnRightClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActivate, LRESULT &result);
   void ShowColumnsContextMenu(int x, int y);
 
   void OnTimer();
   void OnReload();
   bool OnContextMenu(HANDLE windowHandle, int xPos, int yPos);
 
+#ifdef _WIN32
   CMyComPtr<IContextMenu> _sevenZipContextMenu;
   CMyComPtr<IContextMenu> _systemContextMenu;
   HRESULT CreateShellContextMenu(
@@ -529,6 +534,7 @@ public:
   bool InvokePluginCommand(int id);
   bool InvokePluginCommand(int id, IContextMenu *sevenZipContextMenu,
       IContextMenu *systemContextMenu);
+#endif
 
   void InvokeSystemCommand(const char *command);
   void Properties();
@@ -577,10 +583,6 @@ public:
     bool _processTimerMem;
 
     CPanel &_panel;
-
-    CDisableTimerProcessing(const CDisableTimerProcessing &);
-    CDisableTimerProcessing& operator=(const CDisableTimerProcessing &);
-
     public:
 
     CDisableTimerProcessing(CPanel &panel): _panel(panel) { Disable(); }
@@ -594,6 +596,7 @@ public:
     {
       _panel._processTimer = _processTimerMem;
     }
+    CDisableTimerProcessing& operator=(const CDisableTimerProcessing &) {; }
   };
 
   class CDisableNotify
@@ -602,10 +605,6 @@ public:
     bool _processStatusBarMem;
 
     CPanel &_panel;
-
-    CDisableNotify(const CDisableNotify &);
-    CDisableNotify& operator=(const CDisableNotify &);
-
     public:
 
     CDisableNotify(CPanel &panel): _panel(panel) { Disable(); }
@@ -627,6 +626,7 @@ public:
       _panel._processNotify = _processNotifyMem;
       _panel._processStatusBar = _processStatusBarMem;
     }
+    CDisableNotify& operator=(const CDisableNotify &) {; }
   };
 
   // bool _passwordIsDefined;
@@ -725,11 +725,13 @@ public:
   void CopyFromNoAsk(const UStringVector &filePaths);
   void CopyFromAsk(const UStringVector &filePaths);
 
+ #ifdef _WIN32
   // empty folderPath means create new Archive to path of first fileName.
   void DropObject(IDataObject * dataObject, const UString &folderPath);
 
   // empty folderPath means create new Archive to path of first fileName.
   void CompressDropFiles(const UStringVector &fileNames, const UString &folderPath);
+#endif
 
   void RefreshTitle(bool always = false) { _panelCallback->RefreshTitle(always);  }
   void RefreshTitleAlways() { RefreshTitle(true);  }

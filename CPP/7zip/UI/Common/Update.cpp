@@ -41,6 +41,19 @@ using namespace NName;
 
 static CFSTR kTempFolderPrefix = FTEXT("7zE");
 
+#ifdef ENV_UNIX
+FString GetModuleDirPrefix()
+{
+  FString s;
+
+  const char *p7zip_home_dir = getenv("P7ZIP_HOME_DIR");
+  if (p7zip_home_dir) {
+    return MultiByteToUnicodeString(p7zip_home_dir,CP_ACP);
+  }
+
+  return FTEXT(".") FSTRING_PATH_SEPARATOR;
+}
+#endif
 
 static bool DeleteEmptyFolderAndEmptySubFolders(const FString &path)
 {
@@ -974,7 +987,7 @@ HRESULT UpdateArchive(
     bool found = false;
     if (options.SfxModule.Find(FCHAR_PATH_SEPARATOR) < 0)
     {
-      const FString fullName = NDLL::GetModuleDirPrefix() + options.SfxModule;
+      const FString fullName = ::GetModuleDirPrefix() + options.SfxModule;
       if (NFind::DoesFileExist(fullName))
       {
         options.SfxModule = fullName;

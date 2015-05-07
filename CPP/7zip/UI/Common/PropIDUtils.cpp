@@ -508,6 +508,7 @@ bool CheckNtSecure(const Byte *data, UInt32 size)
 
 #endif
 
+#ifdef _WIN32
 bool ConvertNtReparseToString(const Byte *data, UInt32 size, UString &s)
 {
   s.Empty();
@@ -549,5 +550,6 @@ bool ConvertNtReparseToString(const Byte *data, UInt32 size, UString &s)
   }
   return true;
 }
+#endif
 
 #endif

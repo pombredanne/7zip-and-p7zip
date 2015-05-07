@@ -85,7 +85,7 @@ STDMETHODIMP CHandler::GetProperty(UInt32 index, PROPID propID, PROPVARIANT *val
   const CBlock &block = _blocks[index];
   switch (propID)
   {
-    case kpidSize: prop = block.Data.GetPos(); break;
+    case kpidSize: prop = (UInt64)block.Data.GetPos(); break;
     case kpidVa: prop = block.Offset; break;
     case kpidPath:
     {

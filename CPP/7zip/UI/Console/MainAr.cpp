@@ -19,7 +19,7 @@ CStdOutStream *g_StdStream = 0;
 
 extern int Main2(
   #ifndef _WIN32
-  int numArgs, const char *args[]
+  int numArgs, char *args[]
   #endif
 );
 
@@ -35,7 +35,7 @@ static const char *kInternalExceptionMessage = "\n\nInternal Error #";
 int MY_CDECL main
 (
   #ifndef _WIN32
-  int numArgs, const char *args[]
+  int numArgs, char *args[]
   #endif
 )
 {

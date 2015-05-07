@@ -9,6 +9,7 @@
 #include <io.h>
 #define MY_SET_BINARY_MODE(file) _setmode(_fileno(file), O_BINARY)
 #else
+int global_use_lstat = 0;
 #define MY_SET_BINARY_MODE(file)
 #endif
 

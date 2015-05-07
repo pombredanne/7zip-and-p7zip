@@ -11,7 +11,7 @@
 
 #include "../../../Windows/FileDir.h"
 #include "../../../Windows/FileIO.h"
-#include "../../../Windows/FileSystem.h"
+// #include "../../../Windows/FileSystem.h"
 #include "../../../Windows/PropVariant.h"
 
 #include "../../PropID.h"
@@ -121,7 +121,7 @@ static const char *kDriveTypes[] =
 STDMETHODIMP CFSDrives::LoadItems()
 {
   _drives.Clear();
-
+#ifdef _WIN32
   FStringVector driveStrings;
   MyGetLogicalDriveStrings(driveStrings);
   
@@ -199,6 +199,31 @@ STDMETHODIMP CFSDrives::LoadItems()
       _drives.Add(di);
     }
   }
+#else
+  CDriveInfo di;
+	// Root
+    di.FullSystemName = L"/";
+	di.VolumeName = L"/";
+	di.FileSystemName = L"img";	
+    di.Name = L"/"; // di.FullSystemName.Left(di.FullSystemName.Length() - 1);
+    di.ClusterSize = 0;
+    di.DriveSize = 0;
+    di.FreeSpace = 0;
+    di.DriveType = 0; // FIXME NFile::NSystem::MyGetDriveType(driveName);
+	di.KnownSizes = false;
+	_drives.Add(di);
+	
+	// Home Directory
+	const char * home = getenv("HOME");
+	if (home) {
+		UString ustr = GetUnicodeString(home);
+		di.FullSystemName = ustr + L"/";
+		di.VolumeName = ustr;
+		di.FileSystemName = L"img";	
+		di.Name = ustr;
+		_drives.Add(di);
+	}
+#endif
 
   return S_OK;
 }
@@ -326,6 +351,7 @@ const wchar_t *CFSDrives::GetExt(unsigned index) const
 {
   const CDriveInfo &di = _drives[index];
   const wchar_t *ext;
+#ifdef _WIN32
   if (di.DriveType == DRIVE_CDROM)
     ext = L"iso";
   else if (di.FileSystemName.Find(L"NTFS") >= 0)
@@ -333,18 +359,23 @@ const wchar_t *CFSDrives::GetExt(unsigned index) const
   else if (di.FileSystemName.Find(L"FAT") >= 0)
     ext = L"fat";
   else
+#endif
     ext = L"img";
   return ext;
 }
 
 HRESULT CFSDrives::GetFileSize(unsigned index, UInt64 &fileSize) const
 {
+#ifdef _WIN32
   NIO::CInFile inFile;
   if (!inFile.Open(_drives[index].GetDeviceFileIoName()))
     return GetLastError();
   if (!inFile.SizeDefined)
     return E_FAIL;
   fileSize = inFile.Size;
+#else
+  fileSize = 0;
+#endif
   return S_OK;
 }
 
@@ -423,7 +454,7 @@ STDMETHODIMP CFSDrives::CopyTo(Int32 moveMode, const UInt32 *indices, UInt32 num
     RINOK(callback->SetCurrentFilePath(fs2us(srcPath)));
     
     static const UInt32 kBufferSize = (4 << 20);
-    UInt32 bufferSize = (di.DriveType == DRIVE_REMOVABLE) ? (18 << 10) * 4 : kBufferSize;
+    UInt32 bufferSize = /* FIXME (di.DriveType == DRIVE_REMOVABLE) ? (18 << 10) * 4 : */  kBufferSize;
     RINOK(CopyFileSpec(srcPath, us2fs(destPathResult), false, fileSize, bufferSize, completedSize, callback));
     completedSize += fileSize;
   }

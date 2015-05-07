@@ -2,7 +2,7 @@
 
 #include "StdAfx.h"
 
-#include <Winbase.h>
+// #include <Winbase.h>
 
 #include "../../../Common/Defs.h"
 #include "../../../Common/StringConvert.h"
@@ -47,12 +47,15 @@ struct CProgressInfo
   IProgress *Progress;
 };
 
+#ifdef _WIN32
+
 #ifndef PROGRESS_CONTINUE
 
 #define PROGRESS_CONTINUE 0
 #define PROGRESS_CANCEL 1
 
 #define COPY_FILE_FAIL_IF_EXISTS 0x00000001
+
 
 typedef
 DWORD
@@ -107,8 +110,12 @@ typedef BOOL (WINAPI * CopyFileExPointerW)(
     IN DWORD dwCopyFlags
     );
 
+#endif
+
+
 static bool FsCopyFile(CFSTR oldFile, CFSTR newFile, IProgress *progress, UInt64 &completedSize)
 {
+#ifdef _WIN32
   CProgressInfo progressInfo;
   progressInfo.Progress = progress;
   progressInfo.StartPos = completedSize;
@@ -165,8 +172,14 @@ static bool FsCopyFile(CFSTR oldFile, CFSTR newFile, IProgress *progress, UInt64
     return BOOLToBool(::CopyFile(fs2fas(oldFile), fs2fas(newFile), TRUE));
   }
   #endif
+
+#else
+  extern bool wxw_CopyFile(LPCWSTR existingFile, LPCWSTR newFile, bool overwrite);
+  return wxw_CopyFile(oldFile, newFile, true);
+#endif
 }
 
+#ifdef _WIN32
 typedef BOOL (WINAPI * MoveFileWithProgressPointer)(
     IN LPCWSTR lpExistingFileName,
     IN LPCWSTR lpNewFileName,
@@ -175,17 +188,20 @@ typedef BOOL (WINAPI * MoveFileWithProgressPointer)(
     IN DWORD dwFlags
     );
 
+#endif
+
 #ifdef UNDER_CE
 #define NON_CE_VAR(_v_)
 #else
 #define NON_CE_VAR(_v_) _v_
 #endif
 
+
 static bool FsMoveFile(CFSTR oldFile, CFSTR newFile,
     IProgress * NON_CE_VAR(progress),
     UInt64 & NON_CE_VAR(completedSize))
 {
-  #ifndef UNDER_CE
+  #if 0 // FIXME #ifndef UNDER_CE
   // if (IsItWindows2000orHigher())
   // {
     CProgressInfo progressInfo;
@@ -260,7 +276,8 @@ static HRESULT FsCopyFile(
       &writeAskResult));
   if (IntToBool(writeAskResult))
   {
-    FString destPathNew = us2fs((const wchar_t *)(BSTR)destPathResult);
+    // FString destPathNew = us2fs(destPathResult);
+    FString destPathNew( us2fs(destPathResult) );
     RINOK(callback->SetCurrentFilePath(fs2us(srcPath)));
     if (!FsCopyFile(srcPath, destPathNew, callback, completedSize))
     {
@@ -351,7 +368,7 @@ static HRESULT FsMoveFile(
       &writeAskResult));
   if (IntToBool(writeAskResult))
   {
-    FString destPathNew = us2fs((const wchar_t *)(BSTR)destPathResult);
+    FString destPathNew( us2fs(destPathResult) );
     RINOK(callback->SetCurrentFilePath(fs2us(srcPath)));
     if (!FsMoveFile(srcPath, destPathNew, callback, completedSize))
     {

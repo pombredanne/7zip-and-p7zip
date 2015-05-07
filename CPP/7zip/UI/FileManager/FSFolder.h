@@ -10,13 +10,15 @@
 
 #include "IFolder.h"
 #include "TextPairs.h"
-#include "..\..\Archive\IArchive.h"
+#include "../../Archive/IArchive.h"
 
 namespace NFsFolder {
 
 class CFSFolder;
 
+#ifdef _WIN32
 #define FS_SHOW_LINKS_INFO
+#endif
 
 struct CDirItem: public NWindows::NFile::NFind::CFileInfo
 {

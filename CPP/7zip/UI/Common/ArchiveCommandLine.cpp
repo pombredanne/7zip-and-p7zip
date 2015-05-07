@@ -20,6 +20,8 @@
 #ifdef _WIN32
 #include "../../../Windows/FileMapping.h"
 #include "../../../Windows/Synchronization.h"
+#else
+#include "myPrivate.h"
 #endif
 
 #include "ArchiveCommandLine.h"
@@ -107,10 +109,13 @@ enum Enum
   kEmail,
   kShowDialog,
   kLargePages,
-  kListfileCharSet,
-  kConsoleCharSet,
+  // kListfileCharSet,
+  // kConsoleCharSet,
   kTechMode,
+#ifdef _WIN32
   kShareForWrite,
+#endif
+  kUseLStat,
   kCaseSensitive,
   kHash,
   kArcNameMode,
@@ -204,10 +209,11 @@ static const CSwitchForm kSwitchForms[] =
   { "seml", NSwitchType::kString, false, 0},
   { "ad" },
   { "slp", NSwitchType::kMinus },
-  { "scs", NSwitchType::kString },
-  { "scc", NSwitchType::kString },
+  // { "scs", NSwitchType::kString },
+  // { "scc", NSwitchType::kString },
   { "slt" },
-  { "ssw" },
+  // { "ssw" },
+  { "l" },
   { "ssc", NSwitchType::kMinus },
   { "scrc", NSwitchType::kString, true, 0 },
   { "sa",  NSwitchType::kChar, false, 1, k_ArcNameMode_PostCharSet },
@@ -236,8 +242,8 @@ static const int kCommandIndex = 0;
 // static const char *kUserErrorMessage  = "Incorrect command line";
 static const char *kCannotFindListFile = "Cannot find listfile";
 static const char *kIncorrectListFile = "Incorrect item in listfile.\nCheck charset encoding and -scs switch.";
-// static const char *kIncorrectWildcardInListFile = "Incorrect wildcard in listfile";
-// static const char *kIncorrectWildcardInCommandLine  = "Incorrect wildcard in command line";
+static const char *kIncorrectWildcardInListFile = "Incorrect wildcard in listfile";
+static const char *kIncorrectWildcardInCommandLine  = "Incorrect wildcard in command line";
 static const char *kTerminalOutError = "I won't write compressed data to a terminal";
 static const char *kSameTerminalError = "I won't write data and program's messages to same terminal";
 static const char *kEmptyFilePath = "Empty file path";
@@ -838,7 +844,7 @@ void CArcCmdLineParser::Parse1(const UStringVector &commandStrings,
     options.CaseSensitive = g_CaseSensitive;
   }
 
-  #ifdef _WIN32
+  #ifdef _7ZIP_LARGE_PAGES
   options.LargePages = false;
   if (parser[NKey::kLargePages].ThereIs)
   {
@@ -996,8 +1002,7 @@ void CArcCmdLineParser::Parse2(CArcCmdLineOptions &options)
   if (parser[NKey::kDisableWildcardParsing].ThereIs)
     wildcardMatching = false;
 
-  g_CodePage = FindCharset(parser, NKey::kConsoleCharSet, true, -1);
-  Int32 codePage = FindCharset(parser, NKey::kListfileCharSet, false, CP_UTF8);
+  Int32 codePage = CP_ACP;
 
   bool thereAreSwitchIncludes = false;
   
@@ -1187,8 +1192,10 @@ void CArcCmdLineParser::Parse2(CArcCmdLineOptions &options)
     
     updateOptions.MethodMode.Properties = options.Properties;
 
+#ifdef _WIN32
     if (parser[NKey::kShareForWrite].ThereIs)
       updateOptions.OpenShareForWrite = true;
+#endif
 
     updateOptions.PathMode = censorPathMode;
 
@@ -1244,8 +1251,10 @@ void CArcCmdLineParser::Parse2(CArcCmdLineOptions &options)
     CHashOptions &hashOptions = options.HashOptions;
     hashOptions.PathMode = censorPathMode;
     hashOptions.Methods = options.HashMethods;
+#ifdef _WIN32
     if (parser[NKey::kShareForWrite].ThereIs)
       hashOptions.OpenShareForWrite = true;
+#endif
     hashOptions.StdInMode = options.StdInMode;
     hashOptions.AltStreamsMode = options.AltStreams.Val;
   }
@@ -1253,5 +1262,5 @@ void CArcCmdLineParser::Parse2(CArcCmdLineOptions &options)
   {
   }
   else
-    throw 9815676711;
+    throw 815676711; // FIXME 9815676711;
 }

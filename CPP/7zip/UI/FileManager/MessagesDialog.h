@@ -15,6 +15,7 @@ class CMessagesDialog: public NWindows::NControl::CModalDialog
   void AddMessageDirect(LPCWSTR message);
   void AddMessage(LPCWSTR message);
   virtual bool OnInit();
+  virtual bool OnSize(WPARAM wParam, int xSize, int ySize);
 public:
   const UStringVector *Messages;
   

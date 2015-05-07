@@ -13,10 +13,8 @@ class CListViewDialog: public NWindows::NControl::CModalDialog
   NWindows::NControl::CListView _listView;
   virtual void OnOK();
   virtual bool OnInit();
-#ifdef _WIN32 // FIXME
+  virtual bool OnSize(WPARAM wParam, int xSize, int ySize);
   virtual bool OnNotify(UINT controlID, LPNMHDR header);
-#endif
-
 public:
   UString Title;
   bool DeleteIsAllowed;

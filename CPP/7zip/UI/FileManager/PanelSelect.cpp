@@ -37,6 +37,7 @@ void CPanel::OnShiftSelectMessage()
   _prevFocusedItem = focusedItem;
 }
 
+#ifdef _WIN32
 void CPanel::OnArrowWithShift()
 {
   if (!_mySelectMode)
@@ -99,6 +100,7 @@ void CPanel::OnInsert()
     _listView.EnsureVisible(nextIndex, false);
   }
 }
+#endif
 
 /*
 void CPanel::OnUpWithShift()
@@ -249,6 +251,7 @@ void CPanel::KillSelection()
   }
 }
 
+#ifdef _WIN32
 void CPanel::OnLeftClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActivate)
 {
   if (itemActivate->hdr.hwndFrom != HWND(_listView))
@@ -297,3 +300,5 @@ void CPanel::OnLeftClick(MY_NMLISTVIEW_NMITEMACTIVATE *itemActivate)
   }
   return;
 }
+#endif
+

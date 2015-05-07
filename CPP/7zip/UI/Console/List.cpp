@@ -534,7 +534,7 @@ HRESULT CFieldPrinter::PrintItemInfo(UInt32 index, const CListStat &stat)
     
     if (f.IsRawProp)
     {
-      #ifndef _SFX
+      #if 0 // FIXME #ifndef _SFX
       
       const void *data;
       UInt32 dataSize;

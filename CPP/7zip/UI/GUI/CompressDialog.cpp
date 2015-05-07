@@ -427,7 +427,7 @@ namespace NCompressDialog
   bool CInfo::GetFullPathName(UString &result) const
   {
     #ifndef UNDER_CE
-    // NDirectory::MySetCurrentDirectory(CurrentDirPrefix);
+    // NDir::MySetCurrentDirectory(CurrentDirPrefix);
     #endif
     FString resultF;
     bool res = MyGetFullPathName(us2fs(ArchiveName), resultF);

@@ -28,7 +28,7 @@ void AddDirFileInfo(int phyParent, int logParent, int secureIndex,
   di.ATime = fi.ATime;
   di.MTime = fi.MTime;
   di.Attrib = fi.Attrib;
-  di.IsAltStream = fi.IsAltStream;
+  // FIXME di.IsAltStream = fi.IsAltStream;
   di.PhyParent = phyParent;
   di.LogParent = logParent;
   di.SecureIndex = secureIndex;
@@ -124,7 +124,7 @@ void CDirItems::AddSecurityItem(const FString &path, int &secureIndex)
 
   DWORD errorCode = 0;
   DWORD secureSize;
-  BOOL res = ::GetFileSecurityW(fs2us(path), securInfo, (PSECURITY_DESCRIPTOR)(Byte *)TempSecureBuf, (DWORD)TempSecureBuf.Size(), &secureSize);
+  BOOL res = ::GetFileSecurityW(fs2us(path), securInfo, TempSecureBuf, (DWORD)TempSecureBuf.Size(), &secureSize);
   if (res)
   {
     if (secureSize == 0)
@@ -142,7 +142,7 @@ void CDirItems::AddSecurityItem(const FString &path, int &secureIndex)
       else
       {
         TempSecureBuf.Alloc(secureSize);
-        res = ::GetFileSecurityW(fs2us(path), securInfo, (PSECURITY_DESCRIPTOR)(Byte *)TempSecureBuf, (DWORD)TempSecureBuf.Size(), &secureSize);
+        res = ::GetFileSecurityW(fs2us(path), securInfo, TempSecureBuf, (DWORD)TempSecureBuf.Size(), &secureSize);
         if (res)
         {
           if (secureSize != TempSecureBuf.Size())
@@ -279,7 +279,7 @@ static HRESULT EnumerateDirItems_Spec(
   return res;
 }
 
-#ifndef UNDER_CE
+#if 0 // #ifndef UNDER_CE
 
 static void EnumerateAltStreams(
     const NFind::CFileInfo &fi,
@@ -372,7 +372,7 @@ static HRESULT EnumerateForItem(
       enterToSubFolders2 = true;
   }
 
-  #ifndef UNDER_CE
+  #if 0 // #ifndef UNDER_CE
   if (dirItems.ScanAltStreams)
   {
     EnumerateAltStreams(fi, curNode, phyParent, logParent, phyPrefix,
@@ -505,7 +505,7 @@ static HRESULT EnumerateDirItems(
 
         AddDirFileInfo(phyParent, logParent, secureIndex, fi, dirItems.Items);
 
-        #ifndef UNDER_CE
+        #if 0 // #ifndef UNDER_CE
         {
           CDirItem &dirItem = dirItems.Items.Back();
           dirItems.SetLinkInfo(dirItem, fi, phyPrefix);
@@ -516,7 +516,7 @@ static HRESULT EnumerateDirItems(
 
         dirItems.TotalSize += fi.Size;
 
-        #ifndef UNDER_CE
+        #if 0 // #ifndef UNDER_CE
         if (dirItems.ScanAltStreams)
         {
           UStringVector pathParts;
@@ -565,7 +565,7 @@ static HRESULT EnumerateDirItems(
         }
         else
         #endif
-        if (!fi.Find(fullPath))
+        if (!fi.Find(fullPath,true))
         {
           if (!nextNode.AreThereIncludeItems())
             continue;

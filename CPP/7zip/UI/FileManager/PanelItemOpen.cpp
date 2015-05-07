@@ -2,12 +2,26 @@
 
 #include "StdAfx.h"
 
-#include <tlhelp32.h>
+// For compilers that support precompilation, includes "wx/wx.h".
+#include "wx/wxprec.h"
+
+#ifdef __BORLANDC__
+#pragma hdrstop
+#endif
+
+#ifndef WX_PRECOMP
+#include "wx/wx.h"
+#endif
+#include "wx/mimetype.h"
+
+#undef _WIN32
+
+// #include <tlhelp32.h>
 
 #include "../../../Common/AutoPtr.h"
 #include "../../../Common/StringConvert.h"
 
-#include "../../../Windows/ProcessUtils.h"
+// #include "../../../Windows/ProcessUtils.h"
 #include "../../../Windows/FileName.h"
 #include "../../../Windows/PropVariant.h"
 #include "../../../Windows/PropVariantConv.h"
@@ -40,7 +54,7 @@ extern bool g_IsNT;
 
 static CFSTR kTempDirPrefix = FTEXT("7zO");
 
-#ifndef UNDER_CE
+#if 0 // #ifndef UNDER_CE
 
 class CProcessSnapshot
 {
@@ -69,7 +83,6 @@ public:
   bool GetNextProcess(PROCESSENTRY32 *pe) { return BOOLToBool(Process32Next(_handle, pe)); }
 };
 
-#endif
 
 typedef DWORD (WINAPI *GetProcessIdFunc)(HANDLE process);
 
@@ -154,6 +167,7 @@ public:
     #endif
   }
 };
+#endif
 
 static bool IsNameVirus(const UString &name)
 {
@@ -162,7 +176,7 @@ static bool IsNameVirus(const UString &name)
 
 struct CTmpProcessInfo: public CTempFileInfo
 {
-  CChildProcesses Processes;
+  HANDLE ProcessHandle; //   CChildProcesses Processes;
   HWND Window;
   UString FullPathFolderPrefix;
   bool UsePassword;
@@ -414,12 +428,13 @@ static UString GetQuotedString(const UString &s)
   return UString(L'\"') + s + UString(L'\"');
 }
 
-static HRESULT StartEditApplication(const UString &path, bool useEditor, HWND window, CProcess &process)
+static void StartEditApplication(const UString &path, bool useEditor, HWND window /* , CProcess &process */ )
 {
   UString command;
   ReadRegEditor(useEditor, command);
   if (command.IsEmpty())
   {
+#ifdef _WIN32
     #ifdef UNDER_CE
     command = L"\\Windows\\";
     #else
@@ -430,12 +445,21 @@ static HRESULT StartEditApplication(const UString &path, bool useEditor, HWND wi
     command = fs2us(winDir);
     #endif
     command += L"notepad.exe";
+#else
+    command += L"vi";
+#endif
   }
 
+#ifdef _WIN32
   HRESULT res = process.Create(command, GetQuotedString(path), NULL);
   if (res != SZ_OK)
     ::MessageBoxW(window, LangString(IDS_CANNOT_START_EDITOR), L"7-Zip", MB_OK  | MB_ICONSTOP);
-  return res;
+#else
+  wxString cmd = (const wchar_t *)command;
+  long pid = wxExecute(cmd, wxEXEC_ASYNC);
+  if (pid) return ;
+  ::MessageBoxW(window, LangString(IDS_CANNOT_START_EDITOR), L"7-Zip", MB_OK  | MB_ICONSTOP);
+#endif
 }
 
 void CApp::DiffFiles()
@@ -473,9 +497,18 @@ void CApp::DiffFiles()
 
   UString param = GetQuotedString(path1) + L' ' + GetQuotedString(path2);
 
+#ifdef _WIN32
   HRESULT res = MyCreateProcess(command, param);
   if (res == SZ_OK)
     return;
+#else
+  wxString cmd = (const wchar_t *)command;
+  cmd += L" ";
+  cmd += (const wchar_t *)param;
+
+  long pid = wxExecute(cmd, wxEXEC_ASYNC);
+  if (pid) return ;
+#endif
   ::MessageBoxW(_window, LangString(IDS_CANNOT_START_EDITOR), L"7-Zip", MB_OK  | MB_ICONSTOP);
 }
 
@@ -483,77 +516,49 @@ void CApp::DiffFiles()
 typedef BOOL (WINAPI * ShellExecuteExWP)(LPSHELLEXECUTEINFOW lpExecInfo);
 #endif
 
-static HRESULT StartApplication(const UString &dir, const UString &path, HWND window, CProcess &process)
+static void StartApplication(const UString &dir, const UString &path, HWND window /* , CProcess &process */ )
 {
-  UINT32 result;
-  #ifndef _UNICODE
-  if (g_IsNT)
+  // FIXME
+  extern const TCHAR * nameWindowToUnix(const TCHAR * lpFileName);
+  UString tmpPath = path;
+
+  wxString filename(nameWindowToUnix(tmpPath));
+
+
+  wxString ext = filename.AfterLast(_T('.'));
+
+  printf("StartApplication(%ls) ext='%ls'\n",(const wchar_t *)filename,(const wchar_t *)ext);
+
+  if ( ! ext.empty() )
   {
-    SHELLEXECUTEINFOW execInfo;
-    execInfo.cbSize = sizeof(execInfo);
-    execInfo.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_DDEWAIT;
-    execInfo.hwnd = NULL;
-    execInfo.lpVerb = NULL;
-    execInfo.lpFile = path;
-    execInfo.lpParameters = NULL;
-    execInfo.lpDirectory = dir.IsEmpty() ? NULL : (LPCWSTR)dir;
-    execInfo.nShow = SW_SHOWNORMAL;
-    execInfo.hProcess = 0;
-    ShellExecuteExWP shellExecuteExW = (ShellExecuteExWP)
-    ::GetProcAddress(::GetModuleHandleW(L"shell32.dll"), "ShellExecuteExW");
-    if (shellExecuteExW == 0)
-      return 0;
-    shellExecuteExW(&execInfo);
-    result = (UINT32)(UINT_PTR)execInfo.hInstApp;
-    process.Attach(execInfo.hProcess);
-  }
-  else
-  #endif
-  {
-    SHELLEXECUTEINFO execInfo;
-    execInfo.cbSize = sizeof(execInfo);
-    execInfo.fMask = SEE_MASK_NOCLOSEPROCESS
-      #ifndef UNDER_CE
-      | SEE_MASK_FLAG_DDEWAIT
-      #endif
-      ;
-    execInfo.hwnd = NULL;
-    execInfo.lpVerb = NULL;
-    const CSysString sysPath = GetSystemString(path);
-    const CSysString sysDir = GetSystemString(dir);
-    execInfo.lpFile = sysPath;
-    execInfo.lpParameters = NULL;
-    execInfo.lpDirectory =
-    #ifdef UNDER_CE
-    NULL
-    #else
-    sysDir.IsEmpty() ? NULL : (LPCTSTR)sysDir
-    #endif
-    ;
-    execInfo.nShow = SW_SHOWNORMAL;
-    execInfo.hProcess = 0;
-    ::ShellExecuteEx(&execInfo);
-    result = (UINT32)(UINT_PTR)execInfo.hInstApp;
-    process.Attach(execInfo.hProcess);
-  }
-  if (result <= 32)
-  {
-    switch(result)
+    wxFileType *ft = wxTheMimeTypesManager->GetFileTypeFromExtension(ext);
+    // printf("StartApplication(%ls) ft=%p\n",(const wchar_t *)filename,ft);
+    if (ft)
     {
-      case SE_ERR_NOASSOC:
-        ::MessageBoxW(window,
-          NError::MyFormatMessage(::GetLastError()),
-          // L"There is no application associated with the given file name extension",
-          L"7-Zip", MB_OK | MB_ICONSTOP);
-    }
+      wxString cmd;
+      // wxString type; ft->GetMimeType(&type);
+      wxFileType::MessageParameters params(filename); // , type);
+      bool ok = ft->GetOpenCommand(&cmd, params);
+      // printf("StartApplication(%ls) ok=%d\n",(const wchar_t *)filename,(int)ok);
+      delete ft;
+      if ( ok )
+      {
+        printf("StartApplication(%ls) cmd='%ls'\n",(const wchar_t *)filename,(const wchar_t *)cmd);
+        long pid = wxExecute(cmd, wxEXEC_ASYNC);
+        if (pid) return ;
+      }
+    }	   
   }
-  return S_OK;
+  ::MessageBoxW(window, 
+          // NError::MyFormatMessageW(::GetLastError()),
+          L"There is no application associated with the given file name extension",
+          L"7-Zip", MB_OK | MB_ICONSTOP);
 }
 
 static void StartApplicationDontWait(const UString &dir, const UString &path, HWND window)
 {
-  CProcess process;
-  StartApplication(dir, path, window, process);
+  // CProcess process;
+  StartApplication(dir, path, window /* , process */ );
 }
 
 void CPanel::EditItem(int index, bool useEditor)
@@ -563,8 +568,8 @@ void CPanel::EditItem(int index, bool useEditor)
     OpenItemInArchive(index, false, true, true, useEditor);
     return;
   }
-  CProcess process;
-  StartEditApplication(GetItemFullPath(index), useEditor, (HWND)*this, process);
+  // CProcess process;
+  StartEditApplication(GetItemFullPath(index), useEditor, (HWND)*this /* , process */ );
 }
 
 void CPanel::OpenFolderExternal(int index)
@@ -717,6 +722,7 @@ public:
   ~CExitEventLauncher() {  _exitEvent.Set(); }
 } g_ExitEventLauncher;
 
+#ifdef _WIN32
 static THREAD_FUNC_DECL MyThreadFunction(void *param)
 {
   CMyAutoPtr<CTmpProcessInfo> tmpProcessInfoPtr((CTmpProcessInfo *)param);
@@ -773,6 +779,7 @@ static THREAD_FUNC_DECL MyThreadFunction(void *param)
   tpi->DeleteDirAndFile();
   return 0;
 }
+#endif
 
 #if defined(_WIN32) && !defined(UNDER_CE)
 static const FChar *k_ZoneId_StreamName = FTEXT(":Zone.Identifier");
@@ -1136,13 +1143,13 @@ void CPanel::OpenItemInArchive(int index, bool tryInternal, bool tryExternal, bo
   if (!tryExternal)
     return;
 
-  CProcess process;
-  /* HRESULT res; */
+  // CProcess process;
   if (editMode)
-    /* res = */ StartEditApplication(fs2us(tempFilePath), useEditor, (HWND)*this, process);
+    StartEditApplication(fs2us(tempFilePath), useEditor, (HWND)*this);
   else
-    /* res = */ StartApplication(fs2us(tempDirNorm), fs2us(tempFilePath), (HWND)*this, process);
+    StartApplication(fs2us(tempDirNorm), fs2us(tempFilePath), (HWND)*this);
 
+#ifdef _WIN32
   if ((HANDLE)process == 0)
     return;
 
@@ -1155,6 +1162,7 @@ void CPanel::OpenItemInArchive(int index, bool tryInternal, bool tryExternal, bo
   NWindows::CThread thread;
   if (thread.Create(MyThreadFunction, tpi) != S_OK)
     throw 271824;
+#endif
   tempDirectory.DisableDeleting();
   tmpProcessInfoPtr.release();
   tmpProcessInfoRelease._needDelete = false;

@@ -2,9 +2,9 @@
 
 #include "StdAfx.h"
 
-#include <Psapi.h>
+// FIXME #include <Psapi.h>
 
-#if defined( _WIN32) && defined( _7ZIP_LARGE_PAGES)
+#if defined( _7ZIP_LARGE_PAGES)
 #include "../../../../C/Alloc.h"
 #endif
 
@@ -49,6 +49,9 @@
 #include "../../MyVersion.h"
 #endif
 
+#include "myPrivate.h"
+#include "Windows/System.h"
+
 using namespace NWindows;
 using namespace NFile;
 using namespace NCommandLineParser;
@@ -71,7 +74,8 @@ static const char *kCopyrightString = "\n7-Zip"
 " [64]"
 #endif
 
-" " MY_VERSION_COPYRIGHT_DATE "\n";
+" " MY_VERSION_COPYRIGHT_DATE "\n"
+"p7zip Version " P7ZIP_VERSION ;
 
 static const char *kHelpString =
     "\nUsage: 7z"
@@ -118,7 +122,7 @@ static const char *kHelpString =
     "  -slt : show technical information for l (List) command\n"
     "  -so : write data to stdout\n"
     "  -ssc[-] : set sensitive case mode\n"
-    "  -ssw : compress shared files\n"
+    // "  -ssw : compress shared files\n"
     "  -t{Type} : Set type of archive\n"
     "  -u[-][p#][q#][r#][x#][y#][z#][!newArchiveName] : Update options\n"
     "  -v{Size}[b|k|m|g] : Create volumes\n"
@@ -157,8 +161,27 @@ static void GetArguments(int numArgs, const char *args[], UStringVector &parts)
 
 static void ShowCopyrightAndHelp(CStdOutStream &s, bool needHelp)
 {
-  s << kCopyrightString;
-  // s << "# CPUs: " << (UInt64)NWindows::NSystem::GetNumberOfProcessors() << "\n";
+  s << kCopyrightString << " (locale=" << my_getlocale() <<",Utf16=";
+  if (global_use_utf16_conversion) s << "on";
+  else                             s << "off";
+  s << ",HugeFiles=";
+  if (sizeof(off_t) >= 8) s << "on,";
+  else                    s << "off,";
+  int nbcpu = NWindows::NSystem::GetNumberOfProcessors();
+  if (nbcpu > 1) s << nbcpu << " CPUs";
+  else           s << nbcpu << " CPU";
+
+#ifdef P7ZIP_USE_ASM
+{
+  const char * txt =",ASM";
+  #ifdef MY_CPU_X86_OR_AMD64
+  if (CPU_Is_Aes_Supported()) { txt =",ASM,AES-NI"; }
+  #endif
+  s << txt;
+}
+#endif
+    s << ")\n";
+
   if (needHelp)
     s << kHelpString;
 }
@@ -325,7 +348,7 @@ static void PrintTime(const char *s, UInt64 val, UInt64 total)
   *g_StdStream << '%';
 }
 
-#ifndef UNDER_CE
+#if 0 // #ifndef UNDER_CE
 
 #define SHIFT_SIZE_VALUE(x, num) (((x) + (1 << (num)) - 1) >> (num))
 
@@ -347,6 +370,7 @@ static inline UInt64 GetTime64(const FILETIME &t) { return ((UInt64)t.dwHighDate
 
 static void PrintStat()
 {
+#if 0 // FIXME
   FILETIME creationTimeFT, exitTimeFT, kernelTimeFT, userTimeFT;
   if (!
       #ifdef UNDER_CE
@@ -411,11 +435,12 @@ static void PrintStat()
   #endif
   
   *g_StdStream << endl;
+#endif // FIXME
 }
 
 int Main2(
   #ifndef _WIN32
-  int numArgs, const char *args[]
+  int numArgs, char *args[]
   #endif
 )
 {
@@ -427,7 +452,9 @@ int Main2(
   #ifdef _WIN32
   NCommandLineParser::SplitCommandLine(GetCommandLineW(), commandStrings);
   #else
-  GetArguments(numArgs, args, commandStrings);
+  // GetArguments(numArgs, args, commandStrings);
+  extern void mySplitCommandLine(int numArgs, char *args[],UStringVector &parts);
+  mySplitCommandLine(numArgs,args,commandStrings);  
   #endif
 
   if (commandStrings.Size() == 1)
@@ -857,6 +884,20 @@ int Main2(
         uo,
         errorInfo, &openCallback, &callback, true);
     retCode = WarningsCheck(hresultMain, callback, errorInfo, stdStream);
+#ifdef ENV_UNIX
+    if (uo.SfxMode)
+    {
+        void myAddExeFlag(const UString &name);
+        for(int i = 0; i < uo.Commands.Size(); i++)
+        {
+            CUpdateArchiveCommand &command = uo.Commands[i];
+            if (!uo.StdOutMode)
+            {
+                myAddExeFlag(command.ArchivePath.GetFinalPath());
+            }
+        }
+    }
+#endif
   }
   else if (options.Command.CommandType == NCommandType::kHash)
   {

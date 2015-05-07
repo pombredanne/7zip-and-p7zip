@@ -58,6 +58,7 @@ struct CListViewInfo
 };
 
 
+#ifdef _WIN32
 struct CWindowInfo
 {
   RECT rect;
@@ -70,6 +71,7 @@ struct CWindowInfo
   void Save() const;
   void Read(bool &windowPosDefined, bool &panelInfoDefined);
 };
+#endif
 
 void SaveToolbarsMask(UInt32 toolbarMask);
 UInt32 ReadToolbarsMask();

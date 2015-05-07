@@ -52,8 +52,8 @@ void CPanelCallbackImp::SetFocusToPath(int index)
   if (g_App.NumPanels == 1)
     newPanelIndex = g_App.LastFocusedPanel;
   _app->RefreshTitle();
-  _app->Panels[newPanelIndex]._headerComboBox.SetFocus();
-  _app->Panels[newPanelIndex]._headerComboBox.ShowDropDown();
+  // _app->Panels[newPanelIndex]._headerComboBox.SetFocus();
+  // _app->Panels[newPanelIndex]._headerComboBox.ShowDropDown();
 }
 
 
@@ -61,8 +61,8 @@ void CPanelCallbackImp::OnCopy(bool move, bool copyToSame) { _app->OnCopy(move, 
 void CPanelCallbackImp::OnSetSameFolder() { _app->OnSetSameFolder(_index); }
 void CPanelCallbackImp::OnSetSubFolder()  { _app->OnSetSubFolder(_index); }
 void CPanelCallbackImp::PanelWasFocused() { _app->SetFocusedPanel(_index); _app->RefreshTitle(_index); }
-void CPanelCallbackImp::DragBegin() { _app->DragBegin(_index); }
-void CPanelCallbackImp::DragEnd() { _app->DragEnd(); }
+void CPanelCallbackImp::DragBegin() { /* FIXME _app->DragBegin(_index)*/ ; }
+void CPanelCallbackImp::DragEnd() { /* FIXME _app->DragEnd()*/ ; }
 void CPanelCallbackImp::RefreshTitle(bool always) { _app->RefreshTitle(_index, always); }
 
 void CApp::ReloadLang()
@@ -75,13 +75,15 @@ void CApp::SetListSettings()
   bool showDots = ReadShowDots();
   bool showRealFileIcons = ReadShowRealFileIcons();
 
-  DWORD extendedStyle = LVS_EX_HEADERDRAGDROP;
+  DWORD extendedStyle = 0; /* FIXME LVS_EX_HEADERDRAGDROP;
   if (ReadFullRow())
     extendedStyle |= LVS_EX_FULLROWSELECT;
   if (ReadShowGrid())
     extendedStyle |= LVS_EX_GRIDLINES;
+*/
   bool mySelectionMode = ReadAlternativeSelection();
   
+#ifdef _WIN32
   if (ReadSingleClick())
   {
     extendedStyle |= LVS_EX_ONECLICKACTIVATE | LVS_EX_TRACKSELECT;
@@ -90,6 +92,7 @@ void CApp::SetListSettings()
       extendedStyle |= LVS_EX_UNDERLINEHOT;
     */
   }
+#endif
 
   for (int i = 0; i < kNumPanelsMax; i++)
   {
@@ -99,12 +102,14 @@ void CApp::SetListSettings()
     panel._showRealFileIcons = showRealFileIcons;
     panel._exStyle = extendedStyle;
 
+#ifdef _WIN32
     DWORD style = (DWORD)panel._listView.GetStyle();
     if (mySelectionMode)
       style |= LVS_SINGLESEL;
     else
       style &= ~LVS_SINGLESEL;
     panel._listView.SetStyle(style);
+#endif
     panel.SetExtendedStyle();
   }
 }
@@ -139,6 +144,7 @@ HRESULT CApp::CreateOnePanel(int panelIndex, const UString &mainPath, const UStr
   return S_OK;
 }
 
+#ifdef _WIN32
 static void CreateToolbar(HWND parent,
     NWindows::NControl::CImageList &imageList,
     NWindows::NControl::CToolBar &toolBar,
@@ -168,6 +174,7 @@ static void CreateToolbar(HWND parent,
       ILC_MASK | ILC_COLOR32, 0, 0);
   toolBar.SetImageList(0, imageList);
 }
+#endif
 
 struct CButtonInfo
 {
@@ -215,6 +222,7 @@ static void SetButtonText(int commandID, UString &s)
   SetButtonText(commandID, g_ArchiveButtons, ARRAY_SIZE(g_ArchiveButtons), s);
 }
 
+#ifdef _WIN32
 static void AddButton(
     NControl::CImageList &imageList,
     NControl::CToolBar &toolBar,
@@ -269,12 +277,15 @@ void CApp::ReloadToolbars()
     _toolBar.AutoSize();
   }
 }
+#endif
 
 void CApp::SaveToolbarChanges()
 {
+#ifdef _WIN32
   SaveToolbar();
   ReloadToolbars();
   MoveSubWindows();
+#endif
 }
 
 void MyLoadMenu();
@@ -282,6 +293,7 @@ void MyLoadMenu();
 HRESULT CApp::Create(HWND hwnd, const UString &mainPath, const UString &arcFormat, int xSizes[2], bool &archiveIsOpened, bool &encrypted)
 {
   _window.Attach(hwnd);
+#ifdef _WIN32
   #ifdef UNDER_CE
   _commandBar.Create(g_hInstance, hwnd, 1);
   #endif
@@ -292,6 +304,7 @@ HRESULT CApp::Create(HWND hwnd, const UString &mainPath, const UString &arcForma
 
   ReadToolbar();
   ReloadToolbars();
+#endif
 
   int i;
   for (i = 0; i < kNumPanelsMax; i++)
@@ -340,16 +353,16 @@ HRESULT CApp::SwitchOnOffOnePanel()
     NumPanels++;
     bool archiveIsOpened, encrypted;
     RINOK(CreateOnePanel(1 - LastFocusedPanel, UString(), UString(), archiveIsOpened, encrypted));
-    Panels[1 - LastFocusedPanel].Enable(true);
-    Panels[1 - LastFocusedPanel].Show(SW_SHOWNORMAL);
+    // FIXME Panels[1 - LastFocusedPanel].Enable(true);
+    // FIXME Panels[1 - LastFocusedPanel].Show(SW_SHOWNORMAL);
   }
   else
   {
     NumPanels--;
-    Panels[1 - LastFocusedPanel].Enable(false);
-    Panels[1 - LastFocusedPanel].Show(SW_HIDE);
+    // FIXME Panels[1 - LastFocusedPanel].Enable(false);
+    // FIXME Panels[1 - LastFocusedPanel].Show(SW_HIDE);
   }
-  MoveSubWindows();
+  // FIXME MoveSubWindows();
   return S_OK;
 }
 
@@ -399,7 +412,7 @@ static void ReducePathToRealFileSystemPath(UString &path)
     path.DeleteFrom(pos + 1);
     if (path.Len() == 3 && path[1] == L':')
       break;
-    if (path.Len() > 2 && path[0] == '\\' && path[1] == '\\')
+    if (path.Len() > 2 && path[0] == WCHAR_PATH_SEPARATOR && path[1] == WCHAR_PATH_SEPARATOR)
     {
       int nextPos = path.Find(WCHAR_PATH_SEPARATOR, 2); // pos after \\COMPNAME
       if (nextPos > 0 && path.Find(WCHAR_PATH_SEPARATOR, nextPos + 1) == pos)
@@ -491,7 +504,18 @@ UString CPanel::GetItemsInfoString(const CRecordVector<UInt32> &indices)
     AddValuePair1(info, IDS_PROP_SIZE, filesSize + foldersSize);
   
   info += L"\n";
+#ifdef _WIN32
   info += _currentFolderPrefix;
+#else
+  {
+    extern const TCHAR * nameWindowToUnix(const TCHAR * lpFileName);
+
+    UString tmp = nameWindowToUnix(_currentFolderPrefix);
+
+    info += tmp;
+  }
+#endif
+
   
   for (i = 0; i < indices.Size() && (int)i < (int)kCopyDialog_NumInfoLines - 6; i++)
   {
@@ -783,6 +807,7 @@ int CApp::GetFocusedPanelIndex() const
 static UString g_ToolTipBuffer;
 static CSysString g_ToolTipBufferSys;
 
+#ifdef _WIN32
 void CApp::OnNotify(int /* ctrlID */, LPNMHDR pnmh)
 {
   {
@@ -809,10 +834,18 @@ void CApp::OnNotify(int /* ctrlID */, LPNMHDR pnmh)
     #endif
   }
 }
+#endif
 
 void CApp::RefreshTitle(bool always)
 {
   UString path = GetFocusedPanel()._currentFolderPrefix;
+#ifndef _WIN32
+  {
+    extern const TCHAR * nameWindowToUnix(const TCHAR * lpFileName);
+    UString tmp = nameWindowToUnix(path);
+    path = tmp;
+  }	
+#endif
   if (path.IsEmpty())
     path = L"7-Zip"; // LangString(IDS_APP_TITLE);
   if (!always && path == PrevTitle)

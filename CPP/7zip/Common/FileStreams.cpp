@@ -270,7 +270,7 @@ STDMETHODIMP CInFileStream::GetSize(UInt64 *size)
   return ConvertBoolToHRESULT(File.GetLength(*size));
 }
 
-#ifdef USE_WIN_FILE
+#if 0 // FIXME #ifdef USE_WIN_FILE
 
 STDMETHODIMP CInFileStream::GetProps(UInt64 *size, FILETIME *cTime, FILETIME *aTime, FILETIME *mTime, UInt32 *attrib)
 {

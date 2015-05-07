@@ -65,7 +65,7 @@ struct CInFileStreamVol: public CInFileStream
   int FileNameIndex;
   COpenCallbackImp *OpenCallbackImp;
   CMyComPtr<IArchiveOpenCallback> OpenCallbackRef;
- 
+  CInFileStreamVol(bool ignoreLink = false) : CInFileStream(ignoreLink) { } 
   ~CInFileStreamVol()
   {
     if (OpenCallbackRef)
@@ -86,11 +86,11 @@ STDMETHODIMP COpenCallbackImp::GetStream(const wchar_t *name, IInStream **inStre
   FString fullPath;
   if (!NFile::NName::GetFullPath(_folderPrefix, us2fs(name), fullPath))
     return S_FALSE;
-  if (!_fileInfo.Find(fullPath))
+  if (!_fileInfo.Find(fullPath,true))
     return S_FALSE;
   if (_fileInfo.IsDir())
     return S_FALSE;
-  CInFileStreamVol *inFile = new CInFileStreamVol;
+  CInFileStreamVol *inFile = new CInFileStreamVol(true);
   CMyComPtr<IInStream> inStreamTemp = inFile;
   if (!inFile->Open(fullPath))
     return ::GetLastError();

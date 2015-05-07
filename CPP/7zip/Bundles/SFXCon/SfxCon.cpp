@@ -10,6 +10,10 @@
 #ifdef _WIN32
 #include "../../../Windows/DLL.h"
 #include "../../../Windows/FileDir.h"
+#else
+#include "Common/StringConvert.h"
+#include "Windows/System.h"
+#include "myPrivate.h"
 #endif
 #include "../../../Windows/FileName.h"
 
@@ -24,7 +28,7 @@
 
 using namespace NWindows;
 using namespace NFile;
-using namespace NDir;
+// using namespace NDir;
 using namespace NCommandLineParser;
 
 #ifdef _WIN32
@@ -34,7 +38,8 @@ int g_CodePage = -1;
 extern CStdOutStream *g_StdStream;
 
 static const char *kCopyrightString =
-"\n7-Zip SFX " MY_VERSION_COPYRIGHT_DATE "\n";
+"\n7-Zip SFX " MY_VERSION_COPYRIGHT_DATE "\n"
+"p7zip Version " P7ZIP_VERSION ;
 
 static const int kNumSwitches = 6;
 
@@ -242,7 +247,7 @@ static void GetArguments(int numArgs, const char *args[], UStringVector &parts)
 
 int Main2(
   #ifndef _WIN32
-  int numArgs, const char *args[]
+  int numArgs, char *args[]
   #endif
 )
 {
@@ -256,7 +261,8 @@ int Main2(
   #ifdef _WIN32
   NCommandLineParser::SplitCommandLine(GetCommandLineW(), commandStrings);
   #else
-  GetArguments(numArgs, args, commandStrings);
+  extern void mySplitCommandLine(int numArgs, char *args[],UStringVector &parts);
+  mySplitCommandLine(numArgs,args,commandStrings);
   #endif
 
   #ifdef _WIN32
@@ -273,6 +279,30 @@ int Main2(
   }
 
   #else
+  // After mySplitCommandLine
+  g_StdOut << kCopyrightString << " (locale=" << my_getlocale() <<",Utf16=";
+  if (global_use_utf16_conversion) g_StdOut << "on";
+  else                             g_StdOut << "off";
+  g_StdOut << ",HugeFiles=";
+  if (sizeof(off_t) >= 8) g_StdOut << "on,";
+  else                    g_StdOut << "off,";
+  int nbcpu = NWindows::NSystem::GetNumberOfProcessors();
+  if (nbcpu > 1) g_StdOut << nbcpu << " CPUs";
+  else           g_StdOut << nbcpu << " CPU";
+
+#ifdef P7ZIP_USE_ASM
+{
+  const char * txt =",ASM";
+  #ifdef MY_CPU_X86_OR_AMD64
+  if (CPU_Is_Aes_Supported())
+  {
+     txt =",ASM,AES-NI";
+  }
+  #endif
+  g_StdOut << txt;
+}
+#endif
+  g_StdOut << ")\n";
 
   UString arcPath = commandStrings.Front();
 

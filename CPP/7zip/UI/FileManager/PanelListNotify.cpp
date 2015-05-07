@@ -125,6 +125,7 @@ LRESULT CPanel::SetItemText(LVITEMW &item)
       return 0;
     }
     
+#ifdef _WIN32
     if (propID == kpidNtReparse)
     {
       UString s;
@@ -143,6 +144,7 @@ LRESULT CPanel::SetItemText(LVITEMW &item)
         return 0;
       }
     }
+#endif
     else if (propID == kpidNtSecure)
     {
       AString s;
@@ -373,6 +375,7 @@ extern bool g_LVN_ITEMACTIVATE_Support;
 
 void CPanel::OnNotifyActivateItems()
 {
+#ifdef _WIN32
   bool alt = IsKeyDown(VK_MENU);
   bool ctrl = IsKeyDown(VK_CONTROL);
   bool shift = IsKeyDown(VK_SHIFT);
@@ -380,6 +383,9 @@ void CPanel::OnNotifyActivateItems()
     Properties();
   else
     OpenSelectedItems(!shift || alt || ctrl);
+#else
+    OpenSelectedItems(true);
+#endif
 }
 
 bool CPanel::OnNotifyList(LPNMHDR header, LRESULT &result)
@@ -411,6 +417,7 @@ bool CPanel::OnNotifyList(LPNMHDR header, LRESULT &result)
       }
     */
 
+#ifdef _WIN32
     case LVN_GETDISPINFOW:
     {
       LV_DISPINFOW *dispInfo = (LV_DISPINFOW *)header;
@@ -437,11 +444,12 @@ bool CPanel::OnNotifyList(LPNMHDR header, LRESULT &result)
       }
       return boolResult;
     }
+#endif
 
     case LVN_COLUMNCLICK:
       OnColumnClick(LPNMLISTVIEW(header));
       return false;
-
+#ifdef _WIN32
     case LVN_ITEMACTIVATE:
       if (g_LVN_ITEMACTIVATE_Support)
       {
@@ -449,15 +457,17 @@ bool CPanel::OnNotifyList(LPNMHDR header, LRESULT &result)
         return false;
       }
       break;
+#endif
     case NM_DBLCLK:
-    case NM_RETURN:
-      if (!g_LVN_ITEMACTIVATE_Support)
+    // FIXME case NM_RETURN:
+      // FIXME if (!g_LVN_ITEMACTIVATE_Support)
       {
         OnNotifyActivateItems();
         return false;
       }
       break;
 
+#ifdef _WIN32
     case NM_RCLICK:
       Post_Refresh_StatusBar();
       break;
@@ -515,10 +525,12 @@ bool CPanel::OnNotifyList(LPNMHDR header, LRESULT &result)
       break;
     }
     // case LVN_BEGINRDRAG:
+#endif
   }
   return false;
 }
 
+#ifdef _WIN32
 bool CPanel::OnCustomDraw(LPNMLVCUSTOMDRAW lplvcd, LRESULT &result)
 {
   switch(lplvcd->nmcd.dwDrawStage)
@@ -579,9 +591,11 @@ bool CPanel::OnCustomDraw(LPNMLVCUSTOMDRAW lplvcd, LRESULT &result)
   }
   return false;
 }
+#endif
 
 void CPanel::Refresh_StatusBar()
 {
+#ifdef _WIN32
   /*
   g_name_cnt++;
   char s[256];
@@ -653,4 +667,6 @@ void CPanel::Refresh_StatusBar()
   sprintf(s, "status = %8d ms", dw);
   OutputDebugStringA(s);
   */
+#endif
 }
+

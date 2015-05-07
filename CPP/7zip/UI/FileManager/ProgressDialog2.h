@@ -148,14 +148,12 @@ class CProgressDialog: public NWindows::NControl::CModalDialog
   UInt64 _progressBar_Range;
   
   NWindows::NControl::CProgressBar m_ProgressBar;
-  NWindows::NControl::CListView _messageList;
+  // FIXME NWindows::NControl::CListView _messageList;
   
   int _numMessages;
 
-  #ifdef __ITaskbarList3_INTERFACE_DEFINED__
-  CMyComPtr<ITaskbarList3> _taskbarList;
-  #endif
-  HWND _hwndForTaskbar;
+  // FIXME CMyComPtr<ITaskbarList3> _taskbarList;
+  // FIXME HWND _hwndForTaskbar;
 
   UInt32 _prevTime;
   UInt64 _elapsedTime;
@@ -239,7 +237,7 @@ class CProgressDialog: public NWindows::NControl::CModalDialog
 public:
   CProgressSync Sync;
   bool CompressingMode;
-  bool WaitMode;
+  // FIXME - not supported bool WaitMode;
   bool ShowCompressionInfo;
   bool MessagesDisplayed; // = true if user pressed OK on all messages or there are no messages.
   int IconID;

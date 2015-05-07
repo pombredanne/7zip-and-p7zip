@@ -87,7 +87,7 @@ public:
 #ifndef _SFX
 #ifndef UNDER_CE
 
-#define SUPPORT_LINKS
+// FIXME #define SUPPORT_LINKS
 
 #endif
 #endif

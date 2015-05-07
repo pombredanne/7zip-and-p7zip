@@ -15,6 +15,7 @@ class CCopyDialog: public NWindows::NControl::CModalDialog
   NWindows::NControl::CComboBox _path;
   virtual void OnOK();
   virtual bool OnInit();
+  virtual bool OnSize(WPARAM wParam, int xSize, int ySize);
   void OnButtonSetPath();
   bool OnButtonClicked(int buttonID, HWND buttonHWND);
 public:

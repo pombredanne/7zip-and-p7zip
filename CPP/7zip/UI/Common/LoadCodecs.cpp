@@ -33,6 +33,8 @@ static const UINT kIconTypesResId = 100;
 #ifdef _WIN32
 #include "../../../Windows/FileName.h"
 #include "../../../Windows/Registry.h"
+#else
+#include "../../../Common/StringConvert.h"
 #endif
 
 using namespace NFile;
@@ -419,6 +421,7 @@ HRESULT CCodecs::LoadFormats()
 #ifdef NEW_FOLDER_INTERFACE
 void CCodecIcons::LoadIcons(HMODULE m)
 {
+#ifdef _WIN32
   UString iconTypes;
   MyLoadString(m, kIconTypesResId, iconTypes);
   UStringVector pairs;
@@ -445,10 +448,12 @@ void CCodecIcons::LoadIcons(HMODULE m)
     iconPair.Ext = s.Left(pos);
     IconPairs.Add(iconPair);
   }
+#endif // #ifdef _WIN32
 }
 
 bool CCodecIcons::FindIconIndex(const UString &ext, int &iconIndex) const
 {
+#ifdef _WIN32
   iconIndex = -1;
   FOR_VECTOR (i, IconPairs)
   {
@@ -459,6 +464,7 @@ bool CCodecIcons::FindIconIndex(const UString &ext, int &iconIndex) const
       return true;
     }
   }
+#endif // #ifdef _WIN32
   return false;
 }
 
@@ -467,18 +473,20 @@ bool CCodecIcons::FindIconIndex(const UString &ext, int &iconIndex) const
 #ifdef _7ZIP_LARGE_PAGES
 extern "C"
 {
-  extern SIZE_T g_LargePageSize;
+  extern size_t g_LargePageSize;
 }
 #endif
 
 HRESULT CCodecs::LoadDll(const FString &dllPath, bool needCheckDll)
 {
+#ifdef _WIN32
   if (needCheckDll)
   {
     NDLL::CLibrary library;
     if (!library.LoadEx(dllPath, LOAD_LIBRARY_AS_DATAFILE))
       return S_OK;
   }
+#endif
   Libs.Add(CCodecLib());
   CCodecLib &lib = Libs.Back();
   lib.Path = dllPath;
@@ -544,7 +552,9 @@ HRESULT CCodecs::LoadDllsFromFolder(const FString &folderPrefix)
 HRESULT CCodecs::Load()
 {
   #ifdef NEW_FOLDER_INTERFACE
+  #ifdef _WIN32
     InternalIcons.LoadIcons(g_hInstance);
+  #endif
   #endif
 
   Formats.Clear();

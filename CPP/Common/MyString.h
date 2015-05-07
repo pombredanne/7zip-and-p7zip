@@ -482,9 +482,9 @@ typedef CObjectVector<CSysString> CSysStringVector;
 
 // ---------- FString ----------
 
-#ifdef _WIN32
+// #ifdef _WIN32
   #define USE_UNICODE_FSTRING
-#endif
+// #endif
 
 #ifdef USE_UNICODE_FSTRING
 

@@ -8,3 +8,6 @@
 #undef MY_VERSION_COPYRIGHT_DATE
 #define MY_COPYRIGHT ": Igor Pavlov : Public domain"
 #define MY_VERSION_COPYRIGHT_DATE MY_VERSION " " MY_COPYRIGHT " : " MY_DATE
+
+#define P7ZIP_VERSION "9.38"
+
