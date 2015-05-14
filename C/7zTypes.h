@@ -244,6 +244,11 @@ typedef struct
 
 #else
 
+#define WIN_CHAR_PATH_SEPARATOR '\\'
+#define WIN_WCHAR_PATH_SEPARATOR L'\\'
+#define WIN_STRING_PATH_SEPARATOR "\\"
+#define WIN_WSTRING_PATH_SEPARATOR L"\\"
+
 #define CHAR_PATH_SEPARATOR '/'
 #define WCHAR_PATH_SEPARATOR L'/'
 #define STRING_PATH_SEPARATOR "/"
