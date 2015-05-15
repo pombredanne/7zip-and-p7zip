@@ -14,7 +14,7 @@ bool IsPath1PrefixedByPath2(const wchar_t *s1, const wchar_t *s2);
 
 inline bool IsCharDirLimiter(wchar_t c)
 {
-  return c == WCHAR_PATH_SEPARATOR
+  return c == WCHAR_PATH_SEPARATOR || L'\\'
     #ifdef _WIN32
       || c == L'/'
     #endif
