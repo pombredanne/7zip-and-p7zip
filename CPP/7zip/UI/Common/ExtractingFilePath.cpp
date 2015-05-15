@@ -146,16 +146,31 @@ UString MakePathNameFromParts(const UStringVector &parts)
   return result;
 }
 
-void RemoveDotParts(const UStringVector &parts, const UStringVector &cleanParts)
+void RemoveDotParts(const UStringVector &parts, UStringVector &cleanParts)
 {
   FOR_VECTOR (i, parts)
   {
-    const UString s = parts[i];
+    UString s = parts[i];
     printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::RemoveDotParts: candidate: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
     if (!s.IsEmpty() && s != L".." && s != L"." && s != L" ")
     {
       printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::RemoveDotParts: keeping: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
-      cleanParts.Add(&s);
+      cleanParts.Add(s);
+    }
+  }
+}
+
+
+void RemoveDotParts2(UStringVector &parts)
+{
+  for (unsigned i = pathParts.Size() - 1; i >= 0; i--)
+  {
+    UString &s = parts[i];
+    printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::RemoveDotParts: candidate: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
+    if (s.IsEmpty() || s == L".." || s != L"." || s != L" ")
+    {
+      printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::RemoveDotParts: skipping: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
+      parts.Delete(i);
     }
   }
 }
