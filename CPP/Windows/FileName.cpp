@@ -96,7 +96,9 @@ static bool ResolveDotsFolders(UString &s)
 
 bool GetFullPath(CFSTR dirPrefix, CFSTR s, FString &res)
 {
-  res = FString(dirPrefix);
+  res = FString(dirPrefix)
+  resolved = s;
+
   UString rem = fs2us(s);
   if (!ResolveDotsFolders(rem)) 
   {
