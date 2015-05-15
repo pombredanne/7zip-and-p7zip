@@ -29,7 +29,6 @@ UString MakeLegalName(const UString &name)
 {
   UString zipName = name;
   zipName.Replace(kOSDirDelimiter, kDirDelimiter);
-  zipName.Replace(kOSDirDelimiter + '..' + kOSDirDelimiter, kOSDirDelimiter + '.' + kOSDirDelimiter);
   return zipName;
 }
 
