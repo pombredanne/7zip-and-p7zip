@@ -41,7 +41,6 @@ void NormalizeDirPathPrefix(UString &dirPath)
 static bool ResolveDotsFolders(UString &s)
 {
   s.Replace(L'\\', WCHAR_PATH_SEPARATOR);
-  s.Replace(L'//', WCHAR_PATH_SEPARATOR);
   for (int i = 0;;)
   {
     wchar_t c = s[i];
@@ -98,19 +97,14 @@ static bool ResolveDotsFolders(UString &s)
 bool GetFullPath(CFSTR dirPrefix, CFSTR s, FString &res)
 {
   res = FString(dirPrefix);
-  printf("##DBG GetFullPath1 res: (%ls)\n", (const wchar_t *) res);
   UString rem = fs2us(s);
   if (!ResolveDotsFolders(rem)) 
   {
-    printf("##DBG GetFullPath2 rem: (%ls)\n", (const wchar_t *) rem);
     res += FString(s);
-    printf("##DBG GetFullPath2 res: (%ls)\n", (const wchar_t *) res);
   }
   else 
   {
-    printf("##DBG GetFullPath3 rem: (%ls)\n", (const wchar_t *) rem);
     res += us2fs(rem);
-    printf("##DBG GetFullPath3 res: (%ls)\n",(const wchar_t *) res);
   }
   return true;
 }
