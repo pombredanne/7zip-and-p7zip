@@ -8,6 +8,7 @@ namespace NArchive {
 namespace NItemName {
 
 static const wchar_t kOSDirDelimiter = WCHAR_PATH_SEPARATOR;
+static const wchar_t kOSDirDelimiter2 = WIN_WCHAR_PATH_SEPARATOR;
 static const wchar_t kDirDelimiter = L'/';
 
 void ReplaceToOsPathSeparator(wchar_t *s)
@@ -28,8 +29,18 @@ void ReplaceToOsPathSeparator(wchar_t *s)
 UString MakeLegalName(const UString &name)
 {
   UString zipName = name;
+  printf("##DBG CPP/7zip/Archive/Common/ItemNameUtils.cpp::MakeLegalName: initial: zipName = '%ls'\n", (const wchar_t *) zipName);
   zipName.Replace(kOSDirDelimiter, kDirDelimiter);
-  zipName.Replace(kOSDirDelimiter + '..' + kOSDirDelimiter, kOSDirDelimiter + '.' + kOSDirDelimiter);
+  zipName.Replace(kOSDirDelimiter2, kDirDelimiter);
+  // Using a hackish tab for replacement and removing it afterwards
+  zipName.Replace(kDirDelimiter + L"." + kDirDelimiter, L"\t");
+  zipName.Replace(kDirDelimiter + L".." + kDirDelimiter, L"\t");
+  zipName.Replace(L".." + kDirDelimiter, L"\t{);
+  zipName.Replace(L"." + kDirDelimiter, L"\t");
+  zipName.Replace(kDirDelimiter + kDirDelimiter, kDirDelimiter);
+  zipName.RemoveChar('\t');
+
+  printf("##DBG CPP/7zip/Archive/Common/ItemNameUtils.cpp::MakeLegalName: legal: zipName = '%ls'\n", (const wchar_t *) zipName);
   return zipName;
 }
 
