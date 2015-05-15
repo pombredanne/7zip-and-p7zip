@@ -148,14 +148,15 @@ UString MakePathNameFromParts(const UStringVector &parts)
 
 void RemoveDotParts(const UStringVector &parts, const UStringVector &cleanParts)
 {
-  cleanParts.Clear();
+  //cleanParts.Clear();
   FOR_VECTOR (i, parts)
   {
-    printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::RemoveDotParts: candidate: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
-    if (parts[i] != L".." &&  parts[i] != L"." && parts[i] != L" " && !parts[i].IsEmpty())
+    UString &s = parts[i]
+    printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::RemoveDotParts: candidate: parts[%d] = '%ls'\n", i, (const wchar_t *) s);
+    if (!s.IsEmpty() && s != L".." && s != L"." && s != L" ")
     {
-      printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::RemoveDotParts: keeping: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
-      cleanParts.Add(parts[i]);
+      printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::RemoveDotParts: keeping: parts[%d] = '%ls'\n", i, (const wchar_t *) s);
+      cleanParts.Add(s);
     }
   }
 }
