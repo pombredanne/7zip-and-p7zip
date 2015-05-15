@@ -35,7 +35,7 @@ UString MakeLegalName(const UString &name)
   // Using a hackish tab for replacement and removing it afterwards
   zipName.Replace(kDirDelimiter + L"." + kDirDelimiter, L"\t");
   zipName.Replace(kDirDelimiter + L".." + kDirDelimiter, L"\t");
-  zipName.Replace(L".." + kDirDelimiter, L"\t");
+  zipName.Replace(L".." + kDirDelimiter, L"\t{);
   zipName.Replace(L"." + kDirDelimiter, L"\t");
   zipName.Replace(kDirDelimiter + kDirDelimiter, kDirDelimiter);
   zipName.RemoveChar('\t');
