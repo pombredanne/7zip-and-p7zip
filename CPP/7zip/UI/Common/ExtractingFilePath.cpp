@@ -137,12 +137,14 @@ void MakeCorrectPath(bool isPathFromRoot, UStringVector &pathParts, bool replace
 UString MakePathNameFromParts(const UStringVector &parts)
 {
   printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts\n");
+  UStringVector cleanParts;
+  RemoveDotParts(parts, cleanParts);
   UString result;
-  FOR_VECTOR (i, parts)
+  FOR_VECTOR (i, cleanParts)
   {
     if (i != 0)
       result += WCHAR_PATH_SEPARATOR;
-    result += parts[i];
+    result += cleanParts[i];
   }
   return result;
 }
@@ -206,9 +208,6 @@ UString GetCorrectFullFsPath(const UString &path)
 {
   UStringVector parts;
   SplitPathToParts(path, parts);
-  //UStringVector cleanParts;
-  //RemoveDotParts(parts, cleanParts);
-  RemoveDotParts2(parts);
   FOR_VECTOR (i, parts)
   {
     UString &s = parts[i];
