@@ -40,6 +40,7 @@ void NormalizeDirPathPrefix(UString &dirPath)
 
 static bool ResolveDotsFolders(UString &s)
 {
+  printf("##DBG CPP/Windows/FileName.cpp::ResolveDotsFolders: initial: s = '%ls'\n", (const wchar_t *) s);
   s.Replace(L'\\', WCHAR_PATH_SEPARATOR);
   s.Replace(L'//', WCHAR_PATH_SEPARATOR);
   for (int i = 0;;)
@@ -92,26 +93,24 @@ static bool ResolveDotsFolders(UString &s)
     }
     i++;
   }
+  printf("##DBG CPP/Windows/FileName.cpp::ResolveDotsFolders: resolved: s = '%ls'\n", (const wchar_t *) s);
 }
 
 
 bool GetFullPath(CFSTR dirPrefix, CFSTR s, FString &res)
 {
   res = FString(dirPrefix);
-  printf("##DBG GetFullPath1 res: (%ls)\n", (const wchar_t *) res);
+  printf("##DBG CPP/Windows/FileName.cpp::GetFullPath: initial: res = '%ls'\n", (const wchar_t *) res);
   UString rem = fs2us(s);
   if (!ResolveDotsFolders(rem)) 
   {
-    printf("##DBG GetFullPath2 rem: (%ls)\n", (const wchar_t *) rem);
     res += FString(s);
-    printf("##DBG GetFullPath2 res: (%ls)\n", (const wchar_t *) res);
   }
   else 
   {
-    printf("##DBG GetFullPath3 rem: (%ls)\n", (const wchar_t *) rem);
     res += us2fs(rem);
-    printf("##DBG GetFullPath3 res: (%ls)\n",(const wchar_t *) res);
   }
+  printf("##DBG CPP/Windows/FileName.cpp::GetFullPath: resolved: res = '%ls'\n", (const wchar_t *) res);
   return true;
 }
 
