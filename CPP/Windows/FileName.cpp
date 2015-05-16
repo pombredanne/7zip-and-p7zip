@@ -39,7 +39,6 @@ void NormalizeDirPathPrefix(UString &dirPath)
 
 bool GetFullPath(CFSTR dirPrefix, CFSTR s, FString &res)
 {
-    printf("##DBG GetFullPath: dirPrefix='%ls'\n        s='%s'\n        res=''\n", (const wchar_t *) dirPrefix, s, res);
 	res = FString(dirPrefix) + FString(s);
 
 	return true;
