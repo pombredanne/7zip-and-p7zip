@@ -293,6 +293,12 @@ static inline bool IsDriveName(const UString &s)
 
 void CArchiveExtractCallback::CreateComplexDirectory(const UStringVector &dirPathParts, FString &fullPath)
 {
+//  printf("##DBG CArchiveExtractCallback::CreateComplexDirectory: fullPath = '%ls'\n", (const wchar_t *) fullPath);
+//  FOR_VECTOR (i, dirPathParts)
+//  {
+//   printf("##DBG dirPathPart[%d] = '%ls' \n", i, (const wchar_t *) dirPathParts[i]);
+//  }
+
   bool isAbsPath = false;
   
   if (!dirPathParts.IsEmpty())
