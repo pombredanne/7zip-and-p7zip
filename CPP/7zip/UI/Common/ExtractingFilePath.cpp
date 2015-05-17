@@ -136,7 +136,6 @@ void MakeCorrectPath(bool isPathFromRoot, UStringVector &pathParts, bool replace
 
 UString MakePathNameFromParts(const UStringVector &parts)
 {
-  printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts\n");
   UString result;
   FOR_VECTOR (i, parts)
   {
