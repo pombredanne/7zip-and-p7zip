@@ -206,10 +206,10 @@ UString GetCorrectFullFsPath(const UString &path)
 {
   UStringVector parts;
   SplitPathToParts(path, parts);
-  //UStringVector cleanParts;
-  //RemoveDotParts(parts, cleanParts);
-  RemoveDotParts2(parts);
-  FOR_VECTOR (i, parts)
+  UStringVector cleanParts;
+  RemoveDotParts(parts, cleanParts);
+
+  FOR_VECTOR (i, cleanParts)
   {
     UString &s = parts[i];
     #ifdef _WIN32
@@ -219,5 +219,5 @@ UString GetCorrectFullFsPath(const UString &path)
       s.InsertAtFront(L'_');
     #endif
   }
-  return MakePathNameFromParts(parts);
+  return MakePathNameFromParts(cleanParts);
 }
