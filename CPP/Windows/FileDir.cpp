@@ -65,7 +65,7 @@ DWORD WINAPI GetFullPathNameW( LPCTSTR name, DWORD len, LPTSTR buffer, LPTSTR *l
   if (name[0] == '/') {
     DWORD ret = name_len+2;
     if (ret >= len) {
-      TRACEN((printf("GetFullPathNameA(%ls,%d,)=0000 (case 0)\n",name, (int)len)))
+      TRACEN((printf("GetFullPathNameW(%ls,%d,)=0000 (case 0)\n",name, (int)len)))
       return 0;
     }
     lstrcpy(buffer,L"c:");
@@ -78,13 +78,13 @@ DWORD WINAPI GetFullPathNameW( LPCTSTR name, DWORD len, LPTSTR buffer, LPTSTR *l
         *lastpart=ptr+1;
       ptr++;
     }
-    TRACEN((printf("GetFullPathNameA(%ls,%d,%ls,%ls)=%d\n",name, (int)len,buffer, *lastpart,(int)ret)))
+    TRACEN((printf("GetFullPathNameW(%ls,%d,%ls,%ls)=%d\n",name, (int)len,buffer, *lastpart,(int)ret)))
     return ret;
   }
   if (isascii(name[0]) && (name[1] == ':')) { // FIXME isascii
     DWORD ret = name_len;
     if (ret >= len) {
-      TRACEN((printf("GetFullPathNameA(%ls,%d,)=0000 (case 1)\n",name, (int)len)))
+      TRACEN((printf("GetFullPathNameW(%ls,%d,)=0000 (case 1)\n",name, (int)len)))
       return 0;
     }
     lstrcpy(buffer,name);
@@ -96,14 +96,14 @@ DWORD WINAPI GetFullPathNameW( LPCTSTR name, DWORD len, LPTSTR buffer, LPTSTR *l
         *lastpart=ptr+1;
       ptr++;
     }
-    TRACEN((printf("GetFullPathNameA(%ls,%d,%ls,%ls)=%d\n",name, (int)len,buffer, *lastpart,(int)ret)))
+    TRACEN((printf("GetFullPathNameW(%ls,%d,%ls,%ls)=%d\n",name, (int)len,buffer, *lastpart,(int)ret)))
     return ret;
   }
 
   // name is a relative pathname.
   //
   if (len < 2) {
-    TRACEN((printf("GetFullPathNameA(%ls,%d,)=0000 (case 2)\n",name, (int)len)))
+    TRACEN((printf("GetFullPathNameW(%ls,%d,)=0000 (case 2)\n",name, (int)len)))
     return 0;
   }
 
@@ -123,7 +123,7 @@ DWORD WINAPI GetFullPathNameW( LPCTSTR name, DWORD len, LPTSTR buffer, LPTSTR *l
     ret = begin_len     +    1        + name_len;
 
     if (ret >= len) {
-      TRACEN((printf("GetFullPathNameA(%ls,%d,)=0000 (case 4)\n",name, (int)len)))
+      TRACEN((printf("GetFullPathNameW(%ls,%d,)=0000 (case 4)\n",name, (int)len)))
       return 0;
     }
     UString wbegin = GetUnicodeString(begin);
@@ -138,10 +138,10 @@ DWORD WINAPI GetFullPathNameW( LPCTSTR name, DWORD len, LPTSTR buffer, LPTSTR *l
         *lastpart=ptr+1;
       ptr++;
     }
-    TRACEN((printf("GetFullPathNameA(%ls,%d,%ls,%ls)=%d\n",name, (int)len,buffer, *lastpart,(int)ret)))
+    TRACEN((printf("GetFullPathNameW(%ls,%d,%ls,%ls)=%d\n",name, (int)len,buffer, *lastpart,(int)ret)))
   } else {
     ret = 0;
-    TRACEN((printf("GetFullPathNameA(%ls,%d,)=0000 (case 5)\n",name, (int)len)))
+    TRACEN((printf("GetFullPathNameW(%ls,%d,)=0000 (case 5)\n",name, (int)len)))
   }
   return ret;
 }
@@ -658,54 +658,60 @@ static void AddTrailingDots(CFSTR oldPath, FString &newPath)
     newPath += '.';
 }
 
-#endif
+#endif //WIN_LONG_PATH
 
 
 bool MyGetFullPathName(CFSTR fileName, FString &resFullPath)
 {
   resFullPath.Empty();
   #ifndef _UNICODE
-  if (!g_IsNT)
+  TCHAR s[MAX_PATH + 2];
+  s[0] = 0;
+  LPTSTR fileNamePointer = 0;
+  DWORD needLength = ::GetFullPathName(fs2fas(fileName), MAX_PATH + 1, s, &fileNamePointer);
+  if (needLength == 0 || needLength > MAX_PATH)
+    return false;
+  
+  FString fullPath = fas2fs(s);
+
+  // resolve the path for . and .. parts
+  UString fullPathU = fs2us(fullPath);
+  FString resolved;
+  if (GetFullPath(fullPathU, resolved))
   {
-    TCHAR s[MAX_PATH + 2];
-    s[0] = 0;
-    LPTSTR fileNamePointer = 0;
-    DWORD needLength = ::GetFullPathName(fs2fas(fileName), MAX_PATH + 1, s, &fileNamePointer);
-    if (needLength == 0 || needLength > MAX_PATH)
-      return false;
-    resFullPath = fas2fs(s);
-    return true;
+    resFullPath = resolved;
   }
   else
-  #endif
   {
-    LPWSTR fileNamePointer = 0;
-    WCHAR s[MAX_PATH + 2];
-    s[0] = 0;
-    DWORD needLength = ::GetFullPathNameW(fs2us(fileName), MAX_PATH + 1, s, &fileNamePointer);
-    if (needLength == 0)
-      return false;
-    if (needLength <= MAX_PATH)
-    {
-      resFullPath = us2fs(s);
-      return true;
-    }
-    #ifdef WIN_LONG_PATH
-    needLength++;
-    UString temp;
-    LPWSTR buffer = temp.GetBuffer(needLength + 1);
-    buffer[0] = 0;
-    DWORD needLength2 = ::GetFullPathNameW(fs2us(fileName), needLength, buffer, &fileNamePointer);
-    temp.ReleaseBuffer();
-    if (needLength2 > 0 && needLength2 <= needLength)
-    {
-      resFullPath = us2fs(temp);
-      AddTrailingDots(fileName, resFullPath);
-      return true;
-    }
-    #endif
-    return false;
+    resFullPath = fullPath;
   }
+  return true;
+
+  #else
+  LPWSTR fileNamePointer = 0;
+  WCHAR s[MAX_PATH + 2];
+  s[0] = 0;
+  DWORD needLength = ::GetFullPathNameW(fs2us(fileName), MAX_PATH + 1, s, &fileNamePointer);
+  if (needLength == 0)
+    return false;
+  if (needLength > MAX_PATH)
+      return false;
+
+  // resolve the path for . and .. parts
+  UString fullPathU = s;
+  FString resolved;
+  if (GetFullPath(fullPathU, resolved))
+  {
+    resFullPath = resolved;
+  }
+  else
+  {
+    resFullPath = us2fs(s);
+  }
+
+  return true;
+
+  #endif //_UNICODE
 }
 
 bool SetCurrentDir(CFSTR path)
@@ -733,7 +739,8 @@ bool GetCurrentDir(FString &path)
   return false;
 }
 
-#endif
+#endif //UNDER_CE
+
 
 bool GetFullPathAndSplit(CFSTR path, FString &resDirPrefix, FString &resFileName)
 {
@@ -886,6 +893,3 @@ bool CTempDir::Remove()
 }
 
 }}}
-
-
-
