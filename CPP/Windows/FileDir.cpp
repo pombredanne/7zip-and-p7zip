@@ -29,6 +29,8 @@
 // #define TRACEN(u) u;
 #define TRACEN(u)  /* */
 
+using namespace NName;
+
 int g_filedir = 1;
 
 static NWindows::NSynchronization::CCriticalSection g_CountCriticalSection;
