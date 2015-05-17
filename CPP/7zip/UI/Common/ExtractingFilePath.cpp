@@ -218,5 +218,5 @@ UString GetCorrectFullFsPath(const UString &path)
       s.InsertAtFront(L'_');
     #endif
   }
-  return MakePathNameFromParts(cleanParts);
+  return MakePathNameFromParts(parts);
 }
