@@ -671,12 +671,11 @@ bool MyGetFullPathName(CFSTR fileName, FString &resFullPath)
   DWORD needLength = ::GetFullPathName(fs2fas(fileName), MAX_PATH + 1, s, &fileNamePointer);
   if (needLength == 0 || needLength > MAX_PATH)
     return false;
-  
 
   // resolve the path for . and .. parts
   FString fullPath = fas2fs(s);
   FString resolved;
-  if (NName::GetFullPath(fullPath, resolved))
+  if (NName::GetFullDirPath(fullPath, resolved))
   {
     resFullPath = resolved;
   }
@@ -686,7 +685,8 @@ bool MyGetFullPathName(CFSTR fileName, FString &resFullPath)
   }
   return true;
 
-  #else
+  #else //_UNICODE
+
   LPWSTR fileNamePointer = 0;
   WCHAR s[MAX_PATH + 2];
   s[0] = 0;
@@ -699,7 +699,7 @@ bool MyGetFullPathName(CFSTR fileName, FString &resFullPath)
   // resolve the path for . and .. parts
   FString fullPath = us2fs(s);
   FString resolved;
-  if (NName::GetFullPath(fullPath, resolved))
+  if (NName::GetFullDirPath(fullPath, resolved))
   {
     resFullPath = resolved;
   }
