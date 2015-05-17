@@ -134,6 +134,21 @@ void MakeCorrectPath(bool isPathFromRoot, UStringVector &pathParts, bool replace
   }
 }
 
+UString MakePathNameFromParts(const UStringVector &parts)
+{
+  printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts\n");
+  UStringVector cleanParts;
+  RemoveDotParts(parts, cleanParts);
+  UString result;
+  FOR_VECTOR (i, cleanParts)
+  {
+    if (i != 0)
+      result += WCHAR_PATH_SEPARATOR;
+    result += cleanParts[i];
+  }
+  return result;
+}
+
 static void RemoveDotParts(const UStringVector &parts, UStringVector &cleanParts)
 {
   FOR_VECTOR (i, parts)
@@ -148,6 +163,7 @@ static void RemoveDotParts(const UStringVector &parts, UStringVector &cleanParts
   }
 }
 
+
 static void RemoveDotParts2(UStringVector &parts)
 {
   for (unsigned i = parts.Size() - 1; i >= 0; i--)
@@ -160,21 +176,6 @@ static void RemoveDotParts2(UStringVector &parts)
       parts.Delete(i);
     }
   }
-}
-
-UString MakePathNameFromParts(const UStringVector &parts)
-{
-  printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts\n");
-  UStringVector cleanParts;
-  RemoveDotParts(parts, cleanParts);
-  UString result;
-  FOR_VECTOR (i, cleanParts)
-  {
-    if (i != 0)
-      result += WCHAR_PATH_SEPARATOR;
-    result += cleanParts[i];
-  }
-  return result;
 }
 
 static const wchar_t *k_EmptyReplaceName = L"[]";
