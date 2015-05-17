@@ -139,23 +139,20 @@ UString MakePathNameFromParts(const UStringVector &parts)
   UString result;
   FOR_VECTOR (i, parts)
   {
-    if (i != 0)
-      result += WCHAR_PATH_SEPARATOR;
-    result += parts[i];
+    printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts: candidate: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
+    if (parts[i] != L".." || parts[i] != L".")
+    {
+      if (i != 0)
+        {
+          result += WCHAR_PATH_SEPARATOR;
+        }
+      printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts: kept: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
+      result += parts[i];
+    }
+    printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts: skipped: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
   }
+  printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts: final: result = '%ls'\n", (const wchar_t *) result);
   return result;
-}
-
-void RemoveDotParts(const UStringVector &parts, const UStringVector &cleanParts)
-{
-  cleanParts.Clear();
-  FOR_VECTOR (i, parts)
-  {
-    printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::RemoveDotParts: candidate: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
-    if (parts[i] != L".." &&  parts[i] != L"." && parts[i] != L" " && !parts[i].IsEmpty())
-      printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::RemoveDotParts: keeping: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
-      cleanParts.Add(parts[i]);
-  }
 }
 
 static const wchar_t *k_EmptyReplaceName = L"[]";
@@ -188,10 +185,7 @@ UString GetCorrectFullFsPath(const UString &path)
 {
   UStringVector parts;
   SplitPathToParts(path, parts);
-  UStringVector cleanParts;
-  RemoveDotParts(parts, cleanParts);
-
-  FOR_VECTOR (i, cleanParts)
+  FOR_VECTOR (i, parts)
   {
     UString &s = parts[i];
     #ifdef _WIN32
