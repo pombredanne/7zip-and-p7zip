@@ -150,7 +150,7 @@ void RemoveDotParts(const UStringVector &parts, const UStringVector &cleanParts)
 {
   FOR_VECTOR (i, parts)
   {
-    const UString s = parts[i];
+    UString &s = parts[i];
     printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::RemoveDotParts: candidate: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
     if (!s.IsEmpty() && s != L".." && s != L"." && s != L" ")
     {
