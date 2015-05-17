@@ -118,7 +118,7 @@ bool GetFullPath(CFSTR dirPrefix, CFSTR path, FString &fullPath)
   if (!ResolveDotsFolders(resolvedPath))
     resolvedPath = us2fs(path);
 
-  fullPath += resolvedName;
+  fullPath += resolvedPath;
 
   return true;
 }
