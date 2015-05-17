@@ -139,19 +139,10 @@ UString MakePathNameFromParts(const UStringVector &parts)
   UString result;
   FOR_VECTOR (i, parts)
   {
-    printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts: candidate: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
-    if (parts[i] != L".." || parts[i] != L".")
-    {
-      if (i != 0)
-        {
-          result += WCHAR_PATH_SEPARATOR;
-        }
-      printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts: kept: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
-      result += parts[i];
-    }
-    printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts: skipped: parts[%d] = '%ls'\n", i, (const wchar_t *) parts[i]);
+    if (i != 0)
+      result += WCHAR_PATH_SEPARATOR;
+    result += parts[i];
   }
-  printf("##DBG CPP/7zip/UI/Common/ExtractingFilePath.cpp::MakePathNameFromParts: final: result = '%ls'\n", i, (const wchar_t *) result);
   return result;
 }
 
