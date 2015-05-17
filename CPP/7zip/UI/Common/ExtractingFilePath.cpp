@@ -147,7 +147,7 @@ UString MakePathNameFromParts(const UStringVector &parts)
   return result;
 }
 
-static void RemoveDotParts(const UStringVector &parts, UStringVector &cleanParts)
+void RemoveDotParts(const UStringVector &parts, UStringVector &cleanParts)
 {
   FOR_VECTOR (i, parts)
   {
@@ -162,7 +162,7 @@ static void RemoveDotParts(const UStringVector &parts, UStringVector &cleanParts
 }
 
 
-static void RemoveDotParts2(UStringVector &parts)
+void RemoveDotParts2(UStringVector &parts)
 {
   for (unsigned i = parts.Size() - 1; i >= 0; i--)
   {
