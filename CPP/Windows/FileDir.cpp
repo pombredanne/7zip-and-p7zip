@@ -326,6 +326,21 @@ bool GetLongPaths(CFSTR s1, CFSTR s2, UString &d1, UString &d2)
 }
 #endif
 
+/**
+ * Given the path name of an symlink-extracted-as-a-file
+ * already extracted symlink, 1. open the file at that path
+ * to read the link link which was saved as content
+ * 2. delete the symlink-extracted-as-a-file file
+ * 3. create a symlink that link from the file path read from the 
+ *    content of the symlink-extracted-as-a-file file to the
+ *    path of this symlink-extracted-as-a-file itself
+ * Because no checks are done when creating the symlink
+ * this function is subject to a path traversal vulnerability.
+ * See: 
+ *  http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=774660
+ *  https://bugzilla.redhat.com/show_bug.cgi?id=1179505
+ *  https://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2015-1038
+ */
 static int convert_to_symlink(const char * name) {
   FILE *file = fopen(name,"rb");
   if (file) {
@@ -337,7 +352,7 @@ static int convert_to_symlink(const char * name) {
       if (ir == 0) {
         ir = symlink(buf,name);
       }
-      return ir;    
+      return ir;
     }
   }
   return -1;
