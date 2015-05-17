@@ -22,7 +22,7 @@ void NormalizeDirPathPrefix(UString &dirPath); // ensures that it ended with '\\
 bool IsAbsolutePath(const wchar_t *s);
 
 bool GetFullPath(CFSTR dirPrefix, CFSTR path, FString &fullPath);
-bool GetFullDirPath(CFSTR path, FString &fullPath);
+//bool GetFullDirPath(CFSTR path, FString &fullPath);
 
 }}}
 
