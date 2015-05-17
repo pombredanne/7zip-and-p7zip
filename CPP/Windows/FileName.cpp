@@ -128,7 +128,7 @@ bool GetFullPath(CFSTR dirPrefix, CFSTR path, FString &fullPath)
  */
 bool GetFullDirPath(CFSTR path, FString &fullPath)
 {
-  return GetFullDirPath(NULL, path, fullPath);
+  return GetFullPath(NULL, path, fullPath);
 }
 
 }}}
