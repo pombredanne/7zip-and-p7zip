@@ -29,8 +29,6 @@
 // #define TRACEN(u) u;
 #define TRACEN(u)  /* */
 
-using namespace NName;
-
 int g_filedir = 1;
 
 static NWindows::NSynchronization::CCriticalSection g_CountCriticalSection;
@@ -674,12 +672,11 @@ bool MyGetFullPathName(CFSTR fileName, FString &resFullPath)
   if (needLength == 0 || needLength > MAX_PATH)
     return false;
   
-  FString fullPath = fas2fs(s);
 
   // resolve the path for . and .. parts
-  UString fullPathU = fs2us(fullPath);
+  FString fullPath = fas2fs(s);
   FString resolved;
-  if (NName::GetFullPath(fullPathU, resolved))
+  if (NName::GetFullPath(fullPath, resolved))
   {
     resFullPath = resolved;
   }
@@ -700,15 +697,15 @@ bool MyGetFullPathName(CFSTR fileName, FString &resFullPath)
       return false;
 
   // resolve the path for . and .. parts
-  UString fullPathU = s;
+  FString fullPath = us2fs(s);
   FString resolved;
-  if (NName::GetFullPath(fullPathU, resolved))
+  if (NName::GetFullPath(fullPath, resolved))
   {
     resFullPath = resolved;
   }
   else
   {
-    resFullPath = us2fs(s);
+    resFullPath = fullPath;
   }
 
   return true;
