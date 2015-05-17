@@ -677,7 +677,7 @@ bool MyGetFullPathName(CFSTR fileName, FString &resFullPath)
   // resolve the path for . and .. parts
   UString fullPathU = fs2us(fullPath);
   FString resolved;
-  if (NWindows::NFile::NName::GetFullPath(fullPathU, resolved))
+  if (NName::GetFullPath(fullPathU, resolved))
   {
     resFullPath = resolved;
   }
@@ -700,7 +700,7 @@ bool MyGetFullPathName(CFSTR fileName, FString &resFullPath)
   // resolve the path for . and .. parts
   UString fullPathU = s;
   FString resolved;
-  if (NWindows::NFile::NName::GetFullPath(fullPathU, resolved))
+  if (NName::GetFullPath(fullPathU, resolved))
   {
     resFullPath = resolved;
   }
